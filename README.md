@@ -30,14 +30,14 @@ Phase 1's original GitHub repo is <a href="https://github.com/DataKind-DC/smoke_
 ## Model Input-Output Relationships
 
 
-Input Data | Output Files | Output To...
--------|---------------|-------------
-Homefire_SmokeAlarmInstalls.csv, ACS | smoke_alarm_risk_scores_1a.csv  | Aggregate
-2009_2013_alarm_tract_data.csv, ACS  | tracts_74k_weighted_linear_preds_upsampled.csv | Aggregate
-AHS  | smoke_alarm_risk_scores_1c.csv  | Aggregate
-2010 Census, fire_incident  | 2009_tract_building_fire_per_1k 2010_tract_building_fire_per_1k 2011_tract_building_fire_per_1k 2012_tract_building_fire_per_1k 2013_tract_building_fire_per_1k   | Aggregate
-RC disaster cases, 2010 census tract shape files, state fibs code file  | fires_per_tract  | Aggregate
-modeling_injury_dataset, ACS tract data  | results_tract  | Aggregate
+Input Data | Folder Name | Geo Type |  Description
+-------|-----------|-------------|-------------
+American Community Survey | 02_inputdata_ACS | census tract | socio-economic variables
+American Housing Survey | | |
+American Red Cross Response Data  | | |
+Census  | | |
+NFIRS  | | |
+SVI  | | | 
 
 ## DataKind DataCorps
 
