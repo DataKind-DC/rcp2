@@ -1,4 +1,4 @@
-Overall Objective | Data | Tasks | Sign Up | Important Links
+Overall Objective | Road Map | How to Help and Get Involved | Input Data
 
 # American Red Cross Campaign
 What areas in the USA are at the highest risk of home fires and where should the American Red Cross go to install smoke alarms?
