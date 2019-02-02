@@ -27,17 +27,17 @@ Phase 1's original GitHub repo is <a href="https://github.com/DataKind-DC/smoke_
 3. Feel free to contribute to our GitHub anytime
 
 
-## Model Input-Output Relationships
+## Input Data Sources
 
 
-Input Data | Folder Name | Geo Type |  Description
+Input Data | Folder Name | Geo Type |  Description / Comments
 -------|-----------|-------------|-------------
 American Community Survey | 02_inputdata_ACS | census tract | socio-economic variables
-American Housing Survey | | |
+American Housing Survey | | | 
 American Red Cross Response Data  | | |
 Census  | | |
 NFIRS  | | |
-SVI  | | | 
+SVI  | | |
 
 ## DataKind DataCorps
 
