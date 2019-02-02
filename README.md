@@ -42,21 +42,13 @@ Input Data | Folder Name | Geo Type |  Description / Comments
 -------|-----------|-------------|-------------
 American Community Survey | 02_inputdata_ACS | census tract | socio-economic variables
 American Housing Survey | | |
-
 American Red Cross Preparedness Data | | | ARC home visits for smoke alarm installation and fire safety instruction. Includes the number of smoke alarms installed, environmental hazards, the number of alarms that existed in a dwelling prior to a ARC visit, etc.
-
 American Red Cross Response Data  | | |ARC home visits for smoke alarm installation and fire safety instruction. Includes the number of smoke alarms installed, environmental hazards, the number of alarms that existed in a dwelling prior to a ARC visit, etc.
-
 American Red Cross Boundary Data | | ARC region/chapters, zip codes|
-
 Census  | | |
-
 Homeland Infrastructure Foundation Level Data (HIFLD) fire station locations  | | | 2010 list of >50k fire stations and their latitude & longitude coordinates in the USA [source]. 2017 Census tract & blocks added. Shapefiles can be found at source.
-
 HIFLD emergency medical service locations  | | | 2010 list of ambulatory and EMS locations in the USA [source]. 2017 Census tract & blocks added. Shapefiles can be found at source.
-
 NFIRS  | | Census tract | CSV-file that contains the address, latitude & longitude, Census tract, and Census block information for home fires in the USA from 2009-2016
-
 SVI  | | | 2016 CDC’s Social Vulnerability Index which is based off of Census’s American Community Survey data. Includes indexes for socioeconomic, household composition and disability, minority status and language, and housing and transportation that summarises a population’s resilience to stressors.
 
 ## DataKind DataCorps
