@@ -49,7 +49,7 @@ Census  | | |
 Homeland Infrastructure Foundation Level Data (HIFLD) fire station locations  | | | 2010 list of >50k fire stations and their latitude & longitude coordinates in the USA [source]. 2017 Census tract & blocks added. Shapefiles can be found at source.
 HIFLD emergency medical service locations  | | | 2010 list of ambulatory and EMS locations in the USA [source]. 2017 Census tract & blocks added. Shapefiles can be found at source.
 NFIRS  | | Census tract | CSV-file that contains the address, latitude & longitude, Census tract, and Census block information for home fires in the USA from 2009-2016
-SVI  | | | 2016 CDC’s Social Vulnerability Index which is based off of Census’s American Community Survey data. Includes indexes for socioeconomic, household composition and disability, minority status and language, and housing and transportation that summarises a population’s resilience to stressors.
+SVI  | | | 2016 CDC’s Social Vulnerability Index which is based off of Census’s American Community Survey data. Includes indexes for socioeconomic, household composition and disability, minority status and language, and housing and transportation that summarizes a population’s resilience to stressors.
 
 ## DataKind DataCorps
 
