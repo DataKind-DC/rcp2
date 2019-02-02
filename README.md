@@ -13,11 +13,18 @@ Phase 1's original GitHub repo is <a href="https://github.com/DataKind-DC/smoke_
 
 ## Project Road Map
 1. Work in monthly sprints
-2. Cross Validation of Phase 1 Predictions with New data
-3. Improve/Update Index and models. We have new NFIRS, Red Cross, and ACS data that we would like to incorporate. We would like to consider adding new types of data as well such as climate data.
+2. Document input datasets.  We have new NFIRS, Red Cross, and ACS data that we would like to incorporate. We would like to consider adding new types of data as well such as climate data.
+3. Create a risk model.
 4. Update the Home Fire Risk Map!
 
-## How to Help Now
+## How to help out
+1. Check our project and issue board
+2. Message the team coordinators on DKDC slack @Sherika, @matt.barger, and @judy
+
+## How to get Involved
+1. Attend DKDC DataJams to meet the team and learn about the project.  
+2. If you are interested in being more involved, join our RC team work nights
+3. Feel free to contribute to our GitHub anytime
 
 
 ## Model Input-Output Relationships
