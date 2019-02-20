@@ -26,8 +26,9 @@ Predicting the maximum likelihood of fire deaths that would occur
 4. Update the Home Fire Risk Map!
 
 ## How to help out
-1. Check our project and issue board
-2. Message the team coordinators on DKDC slack @Sherika, @matt.barger, and @judy
+1. Check out Projects board
+2. Check out the Wiki for more background information
+3. Message the team coordinators on DKDC slack @Sherika, @matt.barger, and @judy
 
 ## How to get Involved
 1. Attend DKDC DataJams to meet the team and learn about the project.  
