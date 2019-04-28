@@ -2,14 +2,16 @@
 #INITIAL RUN OF MASTER DATASET COMPILING
 ## BY MATT BARGER (Hi, I'm Matt.)
 ##
-#Notes: I'm doing a simple bind_rows function to put all the datasets together, but you want to make sure that two unifiers (GEOID and date_year) are aligned.
-#0. Obviously this isn't perfect. Changes welcome. Specifically:
-#0a. add date and time increments for NFIRS and ARC_Preparedness database
-#0b. add process to build on ACS/AHS/SVI data
-#0c. add instructions for non-time-based data (i.e., ARC_saved_lives data)
+#Notes: 
+# Summary: I'm using a simple bind_rows function to put all the datasets together, but you want to make sure that two unifiers (GEOID and date_year) are aligned.
 #
-#1. All data comes from the RCP2 data drive. Your filenames may be different from mine
-#2. The files are big. Prepare for that. You will need more than 4 GB of RAM.
+# 0. Obviously this isn't perfect. Changes welcome. Specifically:
+# 0a. add date and time increments for NFIRS and ARC_Preparedness database
+# 0b. add process to build on ACS/AHS/SVI data
+# 0c. add instructions for non-time-based data (i.e., ARC_saved_lives data)
+#
+# 1. All data comes from the RCP2 data drive. Your filenames may be different from mine
+# 2. The files are big. Prepare for that. You will need more than 4 GB of RAM.
 
 rm(list = ls())
 
