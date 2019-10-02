@@ -1,40 +1,35 @@
 Overall Objective | Road Map | How to Help and Get Involved | Input Data
 
 # American Red Cross Campaign
-What areas in the USA are at the highest risk of home fires and where should the American Red Cross go to install smoke alarms?
+What areas in the USA are at the highest risk of home fires, and where should the American Red Cross go to install smoke alarms?
 
-The American Red Cross (RC) Home Fire Prevention Campaign began in 2014 and is geared towards educating the general public about fire safety and providing tools such as smoke alarms to improve the preparedness of an area to home fires. So far, ARC has installed over 1 million smoke alarms across the USA.
+In Phase 1 DKDC created 6 models to analyze fire response data, smoke alarm data, and census data to assign a fire risk score to census tracts across the United States. The results from these models helped generate a map of high-risk census tracts across the United States, which informed planning and helped us adjudicate resources. Now, DKDC has been asked to replicate this effort at a census block level (a smaller geographic unit), so that the Red Cross can more efficiently target smoke detector distribution efforts. This phase of work will help ensure fire alarms are handed out where they are most needed.
+ 
+Phase 2 has three primary objectives:
+1.	Refine and update risk model to include smaller geographic areas and new data.
+2.	Update the user interface so Red Cross end users can interact with the risk scores, view their more specific components, and prioritize locations to distribute smoke detectors.
+3.	Set up a method so that the model can easily be refreshed by the Red Cross team when new home fire datasets are available.
 
-In 2015, DataKind DC, the American Red Cross, and Enigma worked together to create a Home-Fire Risk Score at the U.S. Census Tract Level. The team created models to predict the highest impact areas to go knock on doors to install smoke alarms. These models were developed using proprietary data from the American Red Cross, the American Community Survey, the American Housing Survey, and NFIRS. Since the Red Cross doesn't visit all areas of the USA, risk scores were imputed to non-surveyed areas. Results were displayed on the smoke signals map. Some work was also done to understand historical home fires, where did it happen, how deadly were they?
+## Project Discussion and Materials
+Project Discussion is on the DKDC Slack in the #rcp2_public channel.
 
-The final product was a Home Fire Risk <a href="http://www.datakind.org/blog/american-red-cross-and-datakind-team-up-to-prevent-home-fire-deaths-and-injuries">Map</a>.
+Data Location and Dictionaries: We have new NFIRS, Red Cross, and ACS data that we would like to incorporate. We would like to consider adding new types of data as well such as climate data. The data can be found here (link to google drive?).
 
-Phase 1's original GitHub repo is <a href="https://github.com/DataKind-DC/smoke_alarm_models">here</a>.
+Phase 1 Map: <a href="http://home-fire-risk.github.io/smoke_alarm_map/">Fire Risk Map</a>
 
-## Project objective
-Create a fire risk map to identify areas that are least prepared to respond to house fires. Risk will be measured by:
-Predicting where fires occur
-Predicting the maximum likelihood of fire deaths that would occur
+Phase 1 Blog Post: <a href="http://www.datakind.org/blog/american-red-cross-and-datakind-team-up-to-prevent-home-fire-deaths-and-injuries">DataKind Blog</a>.
 
+## How to Get Involved and Help Out
+Please review the skills we are looking for below, and let us know if you’d like to get involved by emailing a data ambassador or posting in the Slack channel - we’d love your help!
 
+Skills used/needed: 
+There are two main components of the project: data modeling, and visualization. The modeling part requires aggregating, joining, and geocoding large datasets, and modeling fire risk from the variables contained. R has been the main language for the project so far and is preferred, but python or other data analysis welcome also. The visualization portion of the project needs front-end web development skills, particularly Mapbox GL, D3.js, html and javascript.
 
+More reading and background: 
+The GitHub Repo contains links to the onboarding powerpoint, notes on the original model, and related background research.
 
-## Project Road Map
-1. Work in monthly sprints
-2. Document input datasets.  We have new NFIRS, Red Cross, and ACS data that we would like to incorporate. We would like to consider adding new types of data as well such as climate data.
-3. Create a risk model.
-4. Update the Home Fire Risk Map!
-
-## How to help out
-1. Check out Projects board
-2. Check out the Wiki for more background information
-3. Message the team coordinators on DKDC slack @Sherika, @matt.barger, and @judy
-
-## How to get Involved
-1. Attend DKDC DataJams to meet the team and learn about the project.  
-2. If you are interested in being more involved, join our RC team work nights
-3. Feel free to contribute to our GitHub anytime
-
+Current To Dos: 
+Right now, we need help downloading and pre-processing U.S. census data at the block and/or block group level, and merging this with the home fire and other data. After that, we will need help creating home fire risk score machine learning models and updating the user interface. Specific tasks can be found in the GitHub Project Board and Issues.
 
 ## Input Data Sources
 
