@@ -26,7 +26,12 @@ Skills used/needed:
 There are two main components of the project: data modeling, and visualization. The modeling part requires aggregating, joining, and geocoding large datasets, and modeling fire risk from the variables contained. R has been the main language for the project so far and is preferred, but python or other data analysis welcome also. The visualization portion of the project needs front-end web development skills, particularly Mapbox GL, D3.js, html and javascript.
 
 More reading and background: 
-The GitHub Repo contains links to the onboarding powerpoint, notes on the original model, and related background research.
+
+Onboarding powerpoint
+
+Notes on the original model 
+
+More related background research
 
 Current To Dos: 
 Right now, we need help downloading and pre-processing U.S. census data at the block and/or block group level, and merging this with the home fire and other data. After that, we will need help creating home fire risk score machine learning models and updating the user interface. Specific tasks can be found in the GitHub <a href="https://github.com/DataKind-DC/rcp2/projects">Project Board</a> and <a href="https://github.com/DataKind-DC/rcp2/issues">Issues</a>.
