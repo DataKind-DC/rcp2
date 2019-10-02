@@ -1,6 +1,6 @@
-Overall Objective | Road Map | How to Help and Get Involved | Input Data
+Overall Objective | Project Materials | How to Get Involved and Help Out | Input Data
 
-# American Red Cross Campaign
+# Red Cross Fire Risk Map v2
 What areas in the USA are at the highest risk of home fires, and where should the American Red Cross go to install smoke alarms?
 
 In Phase 1 DKDC created 6 models to analyze fire response data, smoke alarm data, and census data to assign a fire risk score to census tracts across the United States. The results from these models helped generate a map of high-risk census tracts across the United States, which informed planning and helped us adjudicate resources. Now, DKDC has been asked to replicate this effort at a census block level (a smaller geographic unit), so that the Red Cross can more efficiently target smoke detector distribution efforts. This phase of work will help ensure fire alarms are handed out where they are most needed.
@@ -29,7 +29,7 @@ More reading and background:
 The GitHub Repo contains links to the onboarding powerpoint, notes on the original model, and related background research.
 
 Current To Dos: 
-Right now, we need help downloading and pre-processing U.S. census data at the block and/or block group level, and merging this with the home fire and other data. After that, we will need help creating home fire risk score machine learning models and updating the user interface. Specific tasks can be found in the GitHub Project Board and Issues.
+Right now, we need help downloading and pre-processing U.S. census data at the block and/or block group level, and merging this with the home fire and other data. After that, we will need help creating home fire risk score machine learning models and updating the user interface. Specific tasks can be found in the GitHub <a href="https://github.com/DataKind-DC/rcp2/projects">Project Board</a> and <a href="https://github.com/DataKind-DC/rcp2/issues">Issues</a>.
 
 ## Input Data Sources
 
