@@ -1,5 +1,6 @@
 # Specific Folders
-/Data
+/Data/raw
+/Data/interim
 
 
 # Compiled source #
