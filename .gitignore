@@ -2,6 +2,8 @@
 /Data/raw
 /Data/interim
 
+#notebook checkpoints
+*/.ipynb_checkpoints/*
 
 # Compiled source #
 ###################
