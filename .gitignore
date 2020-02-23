@@ -1,7 +1,10 @@
 # Specific Folders
 /Data/raw
 /Data/interim
+/Data/Master Project Data
 
+#notebook checkpoints
+.ipynb_checkpoints*
 
 # Compiled source #
 ###################
