@@ -8,13 +8,42 @@ In Phase 1 DKDC created 6 models to analyze fire response data, smoke alarm data
  
 Phase 2 has three primary objectives:
 1.	Refine and update risk model to include smaller geographic areas and new data.
-2.	Update the user interface so Red Cross end users can interact with the risk scores, view their more specific components, and prioritize locations to distribute smoke detectors.
-3.	Set up a method so that the model can easily be refreshed by the Red Cross team when new home fire datasets are available.
+2.	Set up a method so that the model can easily be refreshed by the Red Cross team when new home fire datasets are available.
+
+## Quickstart Guide
+
+#### 1. Get on our Slack Channel 
+ https://dkdc.herokuapp.com/
+#### 2. Get the data repository link from RCP2_public
+#### 3. Download "Master Project Data" folder   RCP2 > 02_data > Master Project Data 
+#### 4. Fork this repo and place 'Master Project Data' into Data folder 
+
+#### 5. Python installation (optional but recommended)
+Download anaconda ( https://anaconda.org/) 
+
+go to command line ( or anaconda terminal) and navigate to this directory (usually documents/github/rcp2)
+  ```
+  conda create -n RCP2 python=3 -c conda-forge
+  conda activate RCP2
+  conda install --file requirements.txt
+  ```
+  This will create your environment and activate and you'll be ready to go. 
+
+#### 6. (optional) download github desktop
+make your life easier if you are new to github
+https://desktop.github.com/
+
+#### 7. (optional) Read Up
+in the Google Drive there is a lot of great resources compiled in both Master Project Data and on the drive at  01_project_overview > Additional reading 
+
+#### 8. Find a Task
+Click on the Projects board (above) and then RCP2 to get a look at all the current tasks
+
 
 ## Project Discussion and Materials
 Project Discussion is on the DKDC Slack in the #rcp2_public channel.
 
-Data Location and Dictionaries: We have new NFIRS, Red Cross, and ACS data that we would like to incorporate. We would like to consider adding new types of data as well such as climate data. The data can be found here (link to google drive?).
+Data Location and Dictionaries: We have new NFIRS, Red Cross, and ACS data that we would like to incorporate. We would like to consider adding new types of data as well such as climate data. 
 
 Phase 1 Map: <a href="http://home-fire-risk.github.io/smoke_alarm_map/">Fire Risk Map</a>
 
@@ -24,20 +53,7 @@ Phase 1 Blog Post: <a href="http://www.datakind.org/blog/american-red-cross-and-
 Please review the skills we are looking for below, and let us know if you’d like to get involved by emailing a data ambassador or posting in the Slack channel - we’d love your help!
 
 Skills used/needed: 
-There are two main components of the project: data modeling, and visualization. The modeling part requires aggregating, joining, and geocoding large datasets, and modeling fire risk from the variables contained. R has been the main language for the project so far and is preferred, but python or other data analysis welcome also. The visualization portion of the project needs front-end web development skills, particularly Mapbox GL, D3.js, html and javascript.
-
-More reading and background: 
-
-Onboarding powerpoint
-
-Notes on the original model 
-
-More related background research
-
-Current To Dos: 
-https://docs.google.com/spreadsheets/d/1I2akhERd_PCd0gkdKw0Mm73oMl0tgtG8Yuw2q9kx5Yc/edit#gid=0
-## Input Data Sources
-
+There are two main components of the project: data modeling, and visualization. The modeling part requires aggregating, joining, and geocoding large datasets, and modeling fire risk from the variables contained. Python been the main language for the project so far and is reccomended for beginners, but R,tableau,GIS is also welcome if you are more comfortable with using it. The visualization portion of the project needs front-end web development skills, particularly Mapbox GL, D3.js, html and javascript.
 
 Input Data | Folder Name | Geo Type |  Description / Comments
 -------|-----------|-------------|-------------
@@ -63,13 +79,13 @@ Project Organization
 ------------
 
     ├── LICENSE
-    ├── Makefile           <- Makefile with commands like `make data` or `make train`
+    |.  requirements.txt   <- list of python packages currently used in project. 
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
-    │   ├── external       <- Data from third party sources.
-    │   ├── interim        <- Intermediate data that has been transformed.
-    │   ├── processed      <- The final, canonical data sets for modeling.
-    │   └── raw            <- The original, immutable data dump.
+    │   ├──
+    │   ├── interim        <- Intermediate data that you have transformed. 
+    │   ├── Master Project Data <- The final, canonical data sets for modeling.(on google drive)
+    │   └── raw            <- The original, immutable data dump. ( on google drive)
     │
     ├── models             <- Trained and serialized models, model predictions, or model summaries
     │
@@ -77,11 +93,13 @@ Project Organization
     │                         the creator's initials, and a short `-` delimited description, e.g.
     │                         `1.0-jqp-initial-data-exploration`.
     │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials.
+    ├── references         <- Data dictionaries, manuals, and all other explanatory materials (moved to google drive in Master                                                                                                project data).
     │
     ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
     │   └── figures        <- Generated graphics and figures to be used in reporting
     │
+    |.  ----(not currently implemented) ---- 
+    |          Future roadmap
     ├── src                <- Source code for use in this project.
     │   ├── __init__.py    <- Makes src a Python module
     │   │
@@ -104,8 +122,6 @@ Project Organization
 
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
 =======
-Overall Objective | Project Materials | How to Get Involved and Help Out | Input Data
-
 
 
 
