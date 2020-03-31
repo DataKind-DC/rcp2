@@ -26,7 +26,7 @@ We use forks so multiple people can be working on copies of the repository witho
 interfering with one another.
 
 The diagram below shows our general process, with the numbers corresponding<br>
-to the detailed instructions below:
+to the detailed instructions below:<br>
 ![](getting_started_imgs/fork_clone_diagram.png)
 
 1. [Sign in](https://github.com/login) to your Github account
