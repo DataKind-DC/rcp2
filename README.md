@@ -11,6 +11,7 @@ Phase 2 has three primary objectives:
 2.	Set up a method so that the model can easily be refreshed by the Red Cross team when new home fire datasets are available.
 
 ## Quickstart Guide
+Here is the general overview of the steps you'll need to perform to get started on our project. For a more details on any of the steps read getting-started.md located in the Docs folder.  
 
 #### 1. Get on our Slack Channel 
  https://dkdc.herokuapp.com/
