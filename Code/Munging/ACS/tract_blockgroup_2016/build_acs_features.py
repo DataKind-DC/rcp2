@@ -10,12 +10,12 @@ import pdb
 
 
 def get_var_info(var_list, lu_df):
-	""" determine appropriate denominators for creating features
+	""" get variable types and labels from lookup data frame
 
 	:param var_list: list of string variable names
 	:param lu_df: column lookup dataframe ready from output of prep_acs.py
 
-	:returns: dict with variable info ... keys=type,label,denom,denom_label
+	:returns: dict with variable info ... keys=type,label
 	"""
 
 	vars = {v: {} for v in var_list}
@@ -30,27 +30,124 @@ def get_var_info(var_list, lu_df):
 			temp['type'] = lu_df.loc[lu_df['code'] == v, 'type'].values[0]
 			temp['label'] = lu_df.loc[lu_df['code'] == v, 'label'].values[0]
 
-			if temp['type'] == 'Int32':
-				if v[-3:] != '001':
-					temp_denom = v[:-3] + '001'
-					if temp_denom in lu_df['code'].values:
-						temp['denom'] = temp_denom
-						temp['denom_label'] = lu_df.loc[lu_df['code'] == \
-														temp_denom, 'label'].\
-														values[0]
-					elif v != 'B00001_001':
-						temp['denom'] = 'B00001_001'
-						temp['denom_label'] = lu_df.loc[lu_df['code'] == \
-														temp_denom, 'label'].\
-														values[0]
-				else:
-					temp['denom'] = 'B00001_001'
-					temp['denom_label'] = lu_df.loc[lu_df['code'] == \
-													temp_denom, 'label'].\
-													values[0]
 			vars[v] = temp
 
 	return vars
+
+
+def do_transformations(data_df, transform_df):
+	""" perform transformation on data frame as listed in transform data frame
+
+	The transform dataframe should have four columns:
+		new_variable, operator, argument1, argument 2
+
+			new_variable is the variable to create
+			operator is the operation to perform
+				currently supports: -, +, *, /, =
+			argument1/2 are either column names or scalar values.
+
+	Operations are performed sequentially so you can include a new variable
+	created via the transforms as an argument in a later calculation.
+
+	:param data_df: pandas dataframe with raw data
+	:param transform_df: pandas dataframe with transformations
+
+	:return: transformed pandas dataframe	
+	"""
+
+	ok_operators = {'-', '+', '*', '/', '='}
+	transform_df['operator'] = transform_df['operator'].str.strip()
+
+	for r in transform_df.itertuples():
+		if r.operator in ok_operators:
+			try:
+				rarg1 = str(r.argument1).strip()
+				rarg2 = str(r.argument2).strip()
+				if rarg1 in data_df.columns:
+					arg1 = data_df[rarg1]
+				else:
+					arg1 = float(rarg1)
+				if rarg2 in data_df.columns:
+					arg2 = data_df[rarg2]
+				elif rarg2.lower() != 'nan':
+					arg2 = float(rarg2)
+				else:
+					arg2 = ''
+
+				if r.operator == '-':
+					data_df[r.variable_name] = arg1 - arg2
+				elif r.operator == '+':
+					data_df[r.variable_name] = arg1 + arg2
+				elif r.operator == '*':
+					data_df[r.variable_name] = arg1 * arg2
+				elif r.operator == '=':
+					data_df[r.variable_name] = arg1
+				elif r.operator == '/':
+					if r.argument2 and r.argument2 != 'NaN':
+						if isinstance(arg2, float):
+							data_df[r.variable_name] = arg1 / arg2
+						else:
+							valid_mask = (data_df[r.argument2].notnull()) & \
+										 (data_df[r.argument2] != 0)
+							data_df[r.variable_name] = (arg1 / arg2).\
+								where(valid_mask)
+							data_df.loc[~valid_mask, r.variable_name] = np.nan
+
+					else:
+						logging.warning('tried to do bad division of {0}/{1}'.\
+							format(r.argument1, r.argument2))
+			except:
+				logging.warning('invalid argument(s): {0}, {1}'.\
+								format(r.argument1, r.argument2))
+
+	return data_df
+
+
+def document_variables(data_df, var_dict, transform_df=None):
+	""" write out labels and operations for each variable
+
+	:param data_df: pandas dataframe with raw data
+	:param var_dict: variable info dict returned from get_var_info
+	:param transform_df: pandas dataframe with transformations
+
+	:return: string documentation
+	"""
+
+	doc = ''
+	for c in list(data_df.columns)[2:]:
+		if c in var_dict.keys():
+			doc += '{code} = {label}\n'.format(code=c, 
+											   label=var_dict[c]['label'])
+		else:
+			if transform_df is not None:
+				if c in transform_df['variable_name'].values:
+					row = transform_df.loc[transform_df['variable_name'] == c, \
+										   :].to_dict()
+					ind = transform_df.index[transform_df['variable_name'] == \
+											 c].tolist()[0]
+					row = {k: row[k][ind] for k in row}
+					raw_arg1 = str(row['argument1'])
+					if raw_arg1 in var_dict.keys():
+						arg1 = '{label} ({code})'.\
+							format(code=raw_arg1, 
+								   label=var_dict[raw_arg1]['label'])
+					else:
+						arg1 = raw_arg1
+
+					raw_arg2 = str(row['argument2'])
+					if raw_arg2 in var_dict.keys():
+						arg2 = '{label} ({code})'.\
+							format(code=raw_arg2, 
+								   label=var_dict[raw_arg2]['label'])
+					else:
+						arg2 = raw_arg2
+
+				doc += '{c} = {a1}'.format(c=c, a1=arg1)
+				if row['operator'] == '=':
+					doc += '\n'
+				else:
+					doc += ' {op} {a2}\n'.format(op=row['operator'], a2=arg2)
+	return doc
 
 
 def get_file_info(var_dict, lu_df):
@@ -84,14 +181,37 @@ def build_acs_features_main(vars_file, lookup_file, acs_files_path,
 	""" create standardized features from raw ACS data
 
 	:param vars_file: string path and filename to list of variables
+		should have column header: variable_name
+		if doing transformations, headers should be (tab delimited): 
+			variable_name, operator, argument1, argument2
 	:param lookup_file: string filename for column lookup file from prep_acs.py
 	:param acs_files_path: string path to folder containing raw ACS data
+	:param output_file: string name, without extension, for output files
 
 	:returns: None
 	"""
 
 	logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
 	                    datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO)
+
+	# get vars/transform file
+	do_transforms = False
+	try:
+		transforms = pd.read_csv(vars_file, sep='\t')
+	except:                                                                   
+		logging.error('unable to read {0}'.format(vars_file))
+		return
+	if 'variable_name' not in transforms.columns:
+		logging.error('missing variable_name column')
+		return
+	if len(transforms.columns) > 1:
+		req_cols = ['operator', 'argument1', 'argument2']
+		if len([x for x in req_cols if x in transforms.columns]) != \
+			len(req_cols):
+			logging.warn('missing some required columns for transforms.'
+						 ' will pull raw variables instead')
+		else:
+			do_transforms = True
 
 	# get vars into a list
 	try:
@@ -110,7 +230,15 @@ def build_acs_features_main(vars_file, lookup_file, acs_files_path,
 		return
 
 	# get variable and file info
-	vars = get_var_info(acs_vars, lu)
+	if not do_transforms:
+		raw_vars = transforms['variable_name'].values.tolist()
+	else:
+		arg1s = [x for x in transforms['argument1'].astype(str).values.tolist() 
+				 if re.match(r'^[BCD][\d_]+$', x)]
+		arg2s = [x for x in transforms['argument2'].astype(str).values.tolist() 
+				 if re.match(r'^[BCD][\d_]+$', x)]
+		raw_vars = list(set(arg1s + arg2s))
+	vars = get_var_info(raw_vars, lu)
 	all_files, file_to_var = get_file_info(vars, lu)
 
 	# get list of raw files and states
@@ -120,16 +248,15 @@ def build_acs_features_main(vars_file, lookup_file, acs_files_path,
 	states = sorted(states)
 
 	# build df to hold features
-	cols = ['state', 'geoid'] + sorted(list(vars.keys()))
-	comb = pd.DataFrame(columns=cols)
+	comb = pd.DataFrame()
 
 	# process raw files state by state, doing calculations on each
 	for s in states:
 		logging.info('processing {state}'.format(state=s))
 		st_raw = pd.DataFrame()
 		for f in all_files:
-			filename = 'acs_output/{state}_raw_{file}.csv'.format(state=s, 
-																  file=f)
+			filename = '{fp}/{state}_raw_{file}.csv'.format(fp=acs_files_path,
+															state=s, file=f)
 			rel_cols = ['state', 'geoid'] + file_to_var[f]
 			col_types = {x: float for x in file_to_var[f]}
 			col_types.update({'state': str, 'geoid': str})
@@ -142,38 +269,32 @@ def build_acs_features_main(vars_file, lookup_file, acs_files_path,
 
 		# do the calculations on the current state
 		st_raw['state'] = st_raw['state'].str.upper()
-		for v in vars.keys():
-			denom = vars[v]['denom']
-			if denom:
-				valid_mask = (st_raw[denom].notnull()) & (st_raw[denom] != 0)
-				st_raw[v] = (st_raw[v] / st_raw[denom]).where(valid_mask)
-				st_raw.loc[~valid_mask, v] = np.nan
-		st_raw = st_raw[cols]
+		if do_transforms:
+			st_raw = do_transformations(st_raw, transforms)
 
 		comb = comb.append(st_raw)
 	comb = comb.reset_index()
+
+	comb['geoid'] = ('#_' + comb['geoid']).where(comb['geoid'].str[:2] != '#_')
+
 	comb.drop('index', axis='columns', inplace=True)
 	comb.to_csv(output_file + '.csv', index=False)
 	logging.info('features written to {0}.csv'.format(output_file))
 
-	# write out transformations
-	with open(output_file + '_transforms.csv', 'w') as o:
-		for v in vars.keys():
-			line = '{code} = {label}'.format(code=v, label=vars[v]['label'])
-			if vars[v]['denom']:
-				line += ' ... DIVIDED BY ... {dlabel} ({code})'.\
-					format(dlabel=vars[v]['denom_label'], 
-						   code=vars[v]['denom'])
-			o.write(line + '\n')
-	logging.info('transformations written to {0}_transfors.csv'.\
-		format(output_file))
+	# write out variables
+	info = document_variables(comb, vars, transform_df=transforms)
+	var_out_file = output_file + '_variables.csv'
+	with open(var_out_file, 'w') as o:
+		o.write(info)
+	logging.info('variables written to {0}'.format(var_out_file))
 
 
 def build_acs_features_cmd():
 
     parser = argparse.ArgumentParser(description='Build ACS features')
 
-    parser.add_argument('vars_file', type=str, help='file with list of vars')
+    parser.add_argument('vars_file', type=str, help='file with list of vars' 
+    					' or list of transformations')
     parser.add_argument('lookup_file', type=str, help='column lookup filename')
     parser.add_argument('acs_files_path', type=str, 
     					help='folders with raw data')

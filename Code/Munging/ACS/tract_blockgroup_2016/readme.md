@@ -6,30 +6,32 @@ one that builds standardized features from that raw data.
 
 ## Setup
 * Make sure the necessary Python packages are installed using <br>
-```pip install -r requirements.txt```
+`pip install -r requirements.txt`
+
+-----
 
 ## Download Raw Data
-The ```prep_acs_tract_block.py``` script downloads raw 2016 ACS 5-year<br>
+The `prep_acs_tract_block.py` script downloads raw 2016 ACS 5-year<br>
 data at the Census tract and blockgroup level for the specified states.<br>
 The state name inputs should be the full name, in camel-case, with spaces <br>
-removed.  For example, ```Arizona``` and ```NewHampshire``` are valid while <br>
+removed.  For example, `Arizona` and `NewHampshire` are valid while <br>
 other variations are not.
 
-The data is downloaded from<br>
+The 2016 data is downloaded from<br>
 https://www2.census.gov/programs-surveys/acs/summary_file/2016/data/5_year_by_state/ <br>
-The templates are pulled from <br>
+The associated templates are pulled from <br>
 https://www2.census.gov/programs-surveys/acs/summary_file/2016/data/2016_5yr_Summary_FileTemplates.zip
 
 ### Usage
 You should only need to download the templates, and check the types, once.
 
 For the first state:<br>
-```python prep_acs_tract_block.py Alabama --check_types``` <br>
+`python prep_acs_tract_block.py Alabama --check_types` <br>
 This will output col_lookup.csv in the current working directory that is <br>
-ingested by future calls to the script without the ```--check_types``` option.
+ingested by future calls to the script without the `--check_types` option.
 
 For subsequent states:<br>
-```python prep_acs_tract_block.py Alaska Arkansas --template_folder 'templates/'```
+`python prep_acs_tract_block.py Alaska Arkansas --template_folder 'templates/'`
 
 ### Full Specification
 ```
@@ -59,17 +61,26 @@ optional arguments:
                         path to write raw files to
 ```
 
+-----
+
 ## Build Features
-The ```build_acs_features.py``` script pulls the variables of interest out of<br>
-the raw files downloaded by the above script and divides them by the total <br>
-variables for use in modeling.
+The `build_acs_features.py` script pulls the variables of interest out of<br>
+the raw files downloaded by the above script and performs the specified <br>
+transformations.
 
 ### Usage
-The first task to is build a list of variable names, one per line, from the<br>
- column lookup file built by ```prep_acs_tract_block.py```.
+The first task to is build the set of transformations.  This should be a tab<br>
+delimited text file with columns: variable_name, operator, argument1, argument2<br>
+Basic arithmetic operators are supported: +, -, *, /.  Arguments can be column<br>
+names or numeric values.  Alternatively, you can include a list of variables,
+one per row, under the variable_name header to select raw variables without
+any recoding.  The list of column names can be found in the column lookup file<br>
+built by `prep_acs_tract_block.py`.
+
+An example transform file is included here as `acs_munging.txt`.
 
 Then run:<br>
-```python build_acs_features.py vars_file lookup_file acs_files_path```
+`python build_acs_features.py transform_file lookup_file acs_files_path`
 
 ### Full Specification
 ```
@@ -79,7 +90,7 @@ usage: build_acs_features.py [-h] [-o OUTPUT_FILE]
 Build ACS features
 
 positional arguments:
-  vars_file             file with list of vars
+  vars_file             file with list of vars or list of transformations
   lookup_file           column lookup filename
   acs_files_path        folders with raw data
 
