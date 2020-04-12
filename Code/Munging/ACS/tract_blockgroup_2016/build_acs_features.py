@@ -20,7 +20,8 @@ def get_var_info(var_list, lu_df):
 
 	vars = {v: {} for v in var_list}
 
-	for v in vars.keys():
+	var_list = list(vars.keys())
+	for v in var_list:
 		if v not in lu_df['code'].values:
 			logging.warning('{0} not a valid code'.format(v))
 			del vars[v]
@@ -176,10 +177,13 @@ def get_file_info(var_dict, lu_df):
 	return all_files, file_to_var
 
 
-def build_acs_features_main(vars_file, lookup_file, acs_files_path, 
-						  output_file='acs_features'):
+def build_acs_features_main(year, vars_file, 
+							lookup_file='acs_{year}_output/col_lookup.csv', 
+							acs_files_path='acs_{year}_output', 
+							output_file='acs_{year}_features'):
 	""" create standardized features from raw ACS data
 
+    :param year: int four-digit year
 	:param vars_file: string path and filename to list of variables
 		should have column header: variable_name
 		if doing transformations, headers should be (tab delimited): 
@@ -193,6 +197,10 @@ def build_acs_features_main(vars_file, lookup_file, acs_files_path,
 
 	logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
 	                    datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO)
+
+	lookup_file = lookup_file.format(year=year)
+	acs_files_path = acs_files_path.format(year=year)
+	output_file = output_file.format(year=year)
 
 	# get vars/transform file
 	do_transforms = False
@@ -293,18 +301,24 @@ def build_acs_features_cmd():
 
     parser = argparse.ArgumentParser(description='Build ACS features')
 
+    parser.add_argument('year', type=int, help='four digit year')
     parser.add_argument('vars_file', type=str, help='file with list of vars' 
     					' or list of transformations')
-    parser.add_argument('lookup_file', type=str, help='column lookup filename')
-    parser.add_argument('acs_files_path', type=str, 
-    					help='folders with raw data')
 
-    parser.add_argument('-o', '--output_file', default='acs_features',
+    parser.add_argument('-lu', '--lookup_file', type=str, 
+    					default='acs_{year}_output/col_lookup.csv',
+    					help='--column lookup filename (default %(default)s)')
+    parser.add_argument('-afp', '--acs_files_path', type=str, 
+    					default='acs_{year}_output',
+    					help='folder with raw data (default %(default)s)')
+    parser.add_argument('-o', '--output_file', default='acs_{year}_features',
                         help='output file name (default %(default)s)')
 
     args = parser.parse_args()
-    build_acs_features_main(args.vars_file, args.lookup_file, 
-    						args.acs_files_path, output_file=args.output_file)
+    build_acs_features_main(args.year, args.vars_file,
+    						lookup_file=args.lookup_file, 
+    						acs_files_path=args.acs_files_path, 
+    						output_file=args.output_file)
 
 
 if __name__ == '__main__':

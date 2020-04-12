@@ -8,10 +8,13 @@ import zipfile
 import argparse
 import re
 import pathlib
+import shutil
+import pdb
 
-def build_column_lookup(template_folder=None):
+def build_column_lookup(year, template_folder=None):
     """ create lookup from code to variable label from template data
 
+    :param year: int four-digit year
     :param template_folder: string folder path
         default: None (will download data from Census webiste)
 
@@ -20,14 +23,18 @@ def build_column_lookup(template_folder=None):
 
     if not template_folder:
         try:
-            url = 'https://www2.census.gov/programs-surveys/acs/' + \
-                'summary_file/2016/data/2016_5yr_Summary_FileTemplates.zip'
+            url = ('https://www2.census.gov/programs-surveys/acs/' + 
+                'summary_file/{y}/data/{y}_5yr_Summary_FileTemplates.zip').\
+                format(y=year)
+            if year == 2010:
+                url = url.replace('Summary_FileTemplates', 
+                                  'SummaryFileTemplates')
             r = requests.get(url)
             open('templates.zip', 'wb').write(r.content)
             with zipfile.ZipFile('templates.zip', 'r') as zip_ref:
-                zip_ref.extractall()
+                zip_ref.extractall('templates_{y}'.format(y=year))
 
-            template_folder = './templates/'
+            template_folder = './templates_{y}'.format(y=year)
             logging.info('templates downloaded')
         except:
             logging.error('unable to get template file from web')
@@ -35,13 +42,23 @@ def build_column_lookup(template_folder=None):
 
     col_lookup = pd.DataFrame(columns=['code', 'label', 'file_num', 'field_num', 
         'type', 'output_part_num'])
-    for i in range(1,123):
-        temp = pd.read_excel('{0}/seq{1}.xls'.format(template_folder, i))
+
+    if os.path.isdir('{0}/{1}'.format(template_folder, 'seq')):
+        temp_folder = '{0}/{1}'.format(template_folder, 'seq')
+    else:
+        temp_folder = template_folder
+
+    template_files = os.listdir(temp_folder)
+    template_files = [f for f in template_files if \
+                      re.match('seq\d+\.xls', f, re.IGNORECASE)]
+    for f in template_files:
+        seq_num = int(re.sub('seq(\d+)\.xls', '\\1', f, flags=re.IGNORECASE))
+        temp = pd.read_excel('{tf}/{f}'.format(tf=temp_folder, f=f))
         data_cols = list(temp.columns)[6:]
         temp = temp[data_cols]
         temp = pd.melt(temp, value_vars=data_cols, var_name='code', 
             value_name='label')
-        temp['file_num'] = i
+        temp['file_num'] = seq_num
         temp['field_num'] = temp.index + 1
         temp['type'] = 'Int32'
 
@@ -50,21 +67,24 @@ def build_column_lookup(template_folder=None):
     col_lookup = col_lookup[['file_num', 'field_num', 'output_part_num', 'type', 
         'code', 'label']].copy()
 
+    os.remove('templates.zip')
+
     return col_lookup, template_folder
 
 
-def get_state_data(state):
+def get_state_data(state, year):
     """ download state data from Census web site
 
     :param state: string state name (full name)
+    :param year: int four-digit year
 
     :return: string state path
     """
 
     try:
         url = ('https://www2.census.gov/programs-surveys/acs/' + 
-            'summary_file/2016/data/5_year_by_state/' + 
-            '{0}_Tracts_Block_Groups_Only.zip').format(state)
+            'summary_file/{y}/data/5_year_by_state/' + 
+            '{st}_Tracts_Block_Groups_Only.zip').format(y=year, st=state)
         r = requests.get(url)
         folder_name = '{0}.zip'.format(state)
         open(folder_name, 'wb').write(r.content)
@@ -75,25 +95,32 @@ def get_state_data(state):
         logging.info('{0} files downloaded from web'.format(state))
         return state_path
     except:
-        logging.error('unable to get {0} ACS files from web'.format(state))
+        logging.error('unable to get {st} {y} ACS files from web'.\
+                      format(st=state, y=year))
         return
 
 
-def build_geo_lookup(state_path, template_folder):
+def build_geo_lookup(state_path, template_folder, year):
     """ create lookup from logrecno to geoid
 
     :param state_path: string path to state folder
     :param template_folder: string folder path
+    :param year: int four-digit year
 
     :return: pandas dataframe
     """
 
     try:
-        geo_header = pd.read_excel('{0}/2016_SFGeoFileTemplate.xls'.format(
-            template_folder))
+        geo_header = pd.read_excel('{tf}/{y}_SFGeoFileTemplate.xls'.\
+                                   format(tf=template_folder, y=year))
         state_files = os.listdir(state_path)
-        geo_file = [f for f in state_files if re.match('g20165..\.csv', f)][0]
-        geo_lookup = pd.read_csv(state_path + geo_file, 
+        geo_file = [f for f in state_files if \
+                    re.match('g{y}5..\....'.format(y=year), f)][0]
+        if geo_file[-3:] == 'txt':
+            sep = '\t'
+        else:
+            sep = ','
+        geo_lookup = pd.read_csv(state_path + geo_file, sep=sep,
             names=geo_header.columns, encoding='latin-1', low_memory=False)
         geo_lookup = geo_lookup.loc[~geo_lookup['TRACT'].isnull(), :].copy()
 
@@ -122,16 +149,18 @@ def build_geo_lookup(state_path, template_folder):
         return geo_lookup
 
     except Exception as ex:
-        logging.error('unable to process geo file in {0}'.format(state_path))
+        logging.error('unable to process geo file in {tf} for {y}'.\
+                      format(tf=template_folder, y=year))
         logging.error(str(ex))
 
 
 
-def build_raw_file(state, col_lookup, geo_lookup, state_path=None, 
-        check_types=False, max_vars=2000, output_path='acs_output/'):
+def build_raw_file(state, year, col_lookup, geo_lookup, state_path=None, 
+        check_types=False, max_vars=2000, output_path='acs_{year}_output/'):
     """ download and combine acs files for a state into one raw csv file
 
     :param state: string state name (full name)
+    :param year: int four-digit year
     :param col_lookup: pandas dataframe created by build_col_lookup
     :param geo_lookup: pandas dataframe created by build_geo_lookup
     :param state_path: string path to state folder
@@ -144,7 +173,8 @@ def build_raw_file(state, col_lookup, geo_lookup, state_path=None,
         there are over 22,000 variables total which takes hours to export as one
             big file
     :param output_path: string path to write raw files to
-        default: acs_output/
+        default: acs_{y}_output/
+        where y=year
 
     :return: updated col_lookup dataframe
     """
@@ -156,8 +186,10 @@ def build_raw_file(state, col_lookup, geo_lookup, state_path=None,
     std_types = {'ignore':'str', 'acs_type':'str', 'state':'str', 
         'ignore2':'int', 'file_num':'int', 'logrecno':'int'}
 
+    output_path = output_path.format(year=year)
+
     if not state_path:
-        state_path = get_state_data(state)
+        state_path = get_state_data(state, year)
 
     files = os.listdir(state_path)
     files = [f for f in files if len(f) >= 19 and f[0]=='e']
@@ -180,11 +212,12 @@ def build_raw_file(state, col_lookup, geo_lookup, state_path=None,
         # read data and update types if needed
         if check_types:
             temp = pd.read_csv(state_path + '/' + file_name, 
-                names=std_cols + data_cols, low_memory=False, 
-                index_col=False, na_values='.', encoding='latin-1')
+                               names=std_cols + data_cols, low_memory=False, 
+                               index_col=False, na_values='.', 
+                               encoding='latin-1')
             for c in data_cols:
-                if re.match('^MEDIAN .*', labels[c]) or \
-                    re.match('^AGGREGATE .*', labels[c]):
+                if re.match('^MEDIAN .*', str(labels[c])) or \
+                    re.match('^AGGREGATE .*', str(labels[c])):
                     col_lookup.loc[col_lookup['code'] == c, 'type'] = 'float64'
                 else:
                     try:
@@ -248,15 +281,17 @@ def build_raw_file(state, col_lookup, geo_lookup, state_path=None,
             state, part_num, cols=num_vars))
 
     if check_types:
-        col_lookup.to_csv('col_lookup.csv', index=False)
+        col_lu_file = '{0}/col_lookup.csv'.format(output_path)
+        col_lookup.to_csv(col_lu_file, index=False)
         logging.info('updated column lookup written to col_lookup.csv')
 
 
-def prep_acs_main(state, template_folder=None, state_path=None, 
-        check_types=False, max_vars=2000, output_path='acs_output/'):
+def prep_acs_main(state, year, template_folder=None, state_path=None, 
+        check_types=False, max_vars=2000, output_path='acs_{year}_output/'):
     """ prep ACS data
 
     :param state: string state name (full name)
+    :param year: int four-digit year
     :param template_folder: string folder path
         default: None (will download data from Census webiste)
     :param state_path: string path to state folder
@@ -277,41 +312,52 @@ def prep_acs_main(state, template_folder=None, state_path=None,
     logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO)
 
-    logging.info('start of prep_acs for {0}'.format(state))
+    logging.info('start of prep_acs for {st} in {y}'.format(st=state, y=year))
+
+    output_path = output_path.format(year=year)
 
     # make sure output path exists
-    pathlib.Path('./' + output_path).mkdir(parents=True, exist_ok=True)
+    temp_path = './{op}'.format(op=output_path)
+    pathlib.Path(temp_path).mkdir(parents=True, exist_ok=True)
 
     # get column lookup
     if check_types:
-        col_lu, template_folder = build_column_lookup(template_folder)
+        col_lu, template_folder = build_column_lookup(year, template_folder)
         if col_lu is None:
             return
     else:
-        col_lu = pd.read_csv('col_lookup.csv')
+        col_lu_file = '{0}/col_lookup.csv'.format(output_path)
+        col_lu = pd.read_csv(col_lu_file)
 
     # get state data
     if not state_path:
-        state_path = get_state_data(state)
+        state_path = get_state_data(state, year)
         if not state_path:
             return
 
     # set up geoids
     logging.info('set up geoids')
-    geo_lu = build_geo_lookup(state_path, template_folder)
+    geo_lu = build_geo_lookup(state_path, template_folder, year)
     if geo_lu is None:
         return
 
     # process raw data
-    col_lu = build_raw_file(state, col_lu, geo_lu, state_path=state_path, 
-        check_types=check_types, max_vars=max_vars, output_path=output_path)
+    col_lu = build_raw_file(state, year, col_lu, geo_lu, state_path=state_path, 
+        check_types=check_types, max_vars=max_vars, 
+        output_path=output_path)
 
-    logging.info('prep_acs completed for {0}'.format(state))
+    # clean up raw state files
+    logging.info('cleaning up raw files')
+    os.remove('{st}.zip'.format(st=state))
+    shutil.rmtree(state)
+
+    logging.info('prep_acs completed for {st} in {y}'.format(st=state, y=year))
 
 
 def prep_acs_cmd():
 
     parser = argparse.ArgumentParser(description='Prep ACS data')
+    parser.add_argument('year', type=int, help='four digit year')
     parser.add_argument('state', type=str, help='state full name', nargs='+')
 
     parser.add_argument('-tf', '--template_folder', default=None,
@@ -323,12 +369,12 @@ def prep_acs_cmd():
     parser.add_argument('-mv', '--max_vars', default=2000, type=int,
         help='approximate number of variables to output per file. '  
         'the script allows up to 10 pct more to keep the number of files down')
-    parser.add_argument('-op', '--output_path', default='acs_output/',
+    parser.add_argument('-op', '--output_path', default='acs_{year}_output/',
         help='path to write raw files to')
 
     args = parser.parse_args()
     for st in args.state:
-        prep_acs_main(st, template_folder=args.template_folder, 
+        prep_acs_main(st, args.year, template_folder=args.template_folder, 
             state_path=args.state_path, check_types=args.check_types,
             max_vars=args.max_vars, output_path=args.output_path)
 

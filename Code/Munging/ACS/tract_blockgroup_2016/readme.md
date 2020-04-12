@@ -8,17 +8,28 @@ one that builds standardized features from that raw data.
 * Make sure the necessary Python packages are installed using <br>
 `pip install -r requirements.txt`
 
+## Sample Workflow
+```
+# download data
+python prep_acs_tract_block.py 2012 Alabama --check_types
+python prep_acs_tract_block.py 2012 Alaska Arkansas  --template_folder 'templates_2012/'
+
+# build features
+python build_acs_features.py 2012 acs_munging.txt
+```
+
 -----
 
 ## Download Raw Data
-The `prep_acs_tract_block.py` script downloads raw 2016 ACS 5-year<br>
-data at the Census tract and blockgroup level for the specified states.<br>
-The state name inputs should be the full name, in camel-case, with spaces <br>
-removed.  For example, `Arizona` and `NewHampshire` are valid while <br>
+The `prep_acs_tract_block.py` script downloads raw ACS 5-year<br>
+data at the Census tract and blockgroup level for the specified states in the<br>
+given year.  The state name inputs should be the full name, in camel-case, <br>
+with spaces removed.  For example, `Arizona` and `NewHampshire` are valid while <br>
 other variations are not.
 
-The 2016 data is downloaded from<br>
+The data is downloaded from<br>
 https://www2.census.gov/programs-surveys/acs/summary_file/2016/data/5_year_by_state/ <br>
+with appropriate year inserted (2016 in this example).<br>
 The associated templates are pulled from <br>
 https://www2.census.gov/programs-surveys/acs/summary_file/2016/data/2016_5yr_Summary_FileTemplates.zip
 
@@ -27,21 +38,22 @@ You should only need to download the templates, and check the types, once.
 
 For the first state:<br>
 `python prep_acs_tract_block.py Alabama --check_types` <br>
-This will output col_lookup.csv in the current working directory that is <br>
+This will output col_lookup.csv in the same folder as the data, that is <br>
 ingested by future calls to the script without the `--check_types` option.
 
 For subsequent states:<br>
-`python prep_acs_tract_block.py Alaska Arkansas --template_folder 'templates/'`
+`python prep_acs_tract_block.py Alaska Arkansas --template_folder 'templates_{year}/'`
 
 ### Full Specification
 ```
 usage: prep_acs_tract_block.py [-h] [-tf TEMPLATE_FOLDER] [-sp STATE_PATH]
                                [-ct] [-mv MAX_VARS] [-op OUTPUT_PATH]
-                               state [state ...]
+                               year state [state ...]
 
 Prep ACS data
 
 positional arguments:
+  year                  four digit year
   state                 state full name
 
 optional arguments:
@@ -80,22 +92,27 @@ built by `prep_acs_tract_block.py`.
 An example transform file is included here as `acs_munging.txt`.
 
 Then run:<br>
-`python build_acs_features.py transform_file lookup_file acs_files_path`
+`python build_acs_features.py year transform_file`
 
 ### Full Specification
 ```
-usage: build_acs_features.py [-h] [-o OUTPUT_FILE]
-                             vars_file lookup_file acs_files_path
+usage: build_acs_features.py [-h] [-lu LOOKUP_FILE] [-afp ACS_FILES_PATH]
+                             [-o OUTPUT_FILE]
+                             year vars_file
 
 Build ACS features
 
 positional arguments:
+  year                  four digit year
   vars_file             file with list of vars or list of transformations
-  lookup_file           column lookup filename
-  acs_files_path        folders with raw data
 
 optional arguments:
   -h, --help            show this help message and exit
+  -lu LOOKUP_FILE, --lookup_file LOOKUP_FILE
+                        --column lookup filename (default
+                        acs_{year}_output/col_lookup.csv)
+  -afp ACS_FILES_PATH, --acs_files_path ACS_FILES_PATH
+                        folder with raw data (default acs_{year}_output)
   -o OUTPUT_FILE, --output_file OUTPUT_FILE
-                        output file name (default acs_features)
+                        output file name (default acs_{year}_features)
 ```
