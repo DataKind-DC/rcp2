@@ -2,7 +2,8 @@
 
 ## Introduction
 This folder contains two scripts: one that downloads raw ACS data, and<br>
-one that builds standardized features from that raw data.
+one that builds standardized features from that raw data.  The code has been <br>
+tested on ACS 5-year estimates from 2014 through 2016.
 
 ## Setup
 * Make sure the necessary Python packages are installed using <br>
@@ -11,11 +12,11 @@ one that builds standardized features from that raw data.
 ## Sample Workflow
 ```
 # download data
-python prep_acs_tract_block.py 2012 Alabama --check_types
-python prep_acs_tract_block.py 2012 Alaska Arkansas  --template_folder 'templates_2012/'
+python prep_acs_tract_block.py 2016 Alabama --check_types
+python prep_acs_tract_block.py 2016 Alaska Arkansas  --template_folder 'templates_2016/'
 
 # build features
-python build_acs_features.py 2012 acs_munging.txt
+python build_acs_features.py 2016 acs_2016_munging.txt
 ```
 
 -----
@@ -89,7 +90,8 @@ one per row, under the variable_name header to select raw variables without
 any recoding.  The list of column names can be found in the column lookup file<br>
 built by `prep_acs_tract_block.py`.
 
-An example transform file is included here as `acs_munging.txt`.
+Example transform files for 2014-2016 are included here as <br>
+`acs_{year}_munging.txt`.
 
 Then run:<br>
 `python build_acs_features.py year transform_file`

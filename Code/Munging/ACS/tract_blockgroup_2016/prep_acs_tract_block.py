@@ -45,6 +45,9 @@ def build_column_lookup(year, template_folder=None):
 
     if os.path.isdir('{0}/{1}'.format(template_folder, 'seq')):
         temp_folder = '{0}/{1}'.format(template_folder, 'seq')
+    elif os.path.isdir('{0}/{1}'.format(template_folder, 'templates')):
+        temp_folder = '{0}/{1}'.format(template_folder, 'templates')
+        template_folder = temp_folder
     else:
         temp_folder = template_folder
 
@@ -110,12 +113,17 @@ def build_geo_lookup(state_path, template_folder, year):
     :return: pandas dataframe
     """
 
+    header_path = '{tf}/{y}_SFGeoFileTemplate.xls'.format(tf=template_folder, 
+                                                       y=year)
+    if not os.path.exists(header_path):
+        header_path = '{tf}/templates/{y}_SFGeoFileTemplate.xls'.\
+                   format(tf=template_folder, y=year)
+
     try:
-        geo_header = pd.read_excel('{tf}/{y}_SFGeoFileTemplate.xls'.\
-                                   format(tf=template_folder, y=year))
+        geo_header = pd.read_excel(header_path)
         state_files = os.listdir(state_path)
-        geo_file = [f for f in state_files if \
-                    re.match('g{y}5..\....'.format(y=year), f)][0]
+        geo_file = sorted([f for f in state_files if \
+                    re.match('g{y}5..\....'.format(y=year), f)])[0]
         if geo_file[-3:] == 'txt':
             sep = '\t'
         else:
@@ -328,6 +336,8 @@ def prep_acs_main(state, year, template_folder=None, state_path=None,
     else:
         col_lu_file = '{0}/col_lookup.csv'.format(output_path)
         col_lu = pd.read_csv(col_lu_file)
+        if os.path.isdir('{0}/{1}'.format(template_folder, 'templates')):
+            template_folder = '{0}/{1}'.format(template_folder, 'templates')
 
     # get state data
     if not state_path:
@@ -339,6 +349,9 @@ def prep_acs_main(state, year, template_folder=None, state_path=None,
     logging.info('set up geoids')
     geo_lu = build_geo_lookup(state_path, template_folder, year)
     if geo_lu is None:
+        return
+    elif geo_lu.shape[0] == 0:
+        logging.error('no geoids read for {s} in {y}'.format(s=state, y=year))
         return
 
     # process raw data

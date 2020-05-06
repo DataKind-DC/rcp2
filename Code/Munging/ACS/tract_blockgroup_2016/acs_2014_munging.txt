@@ -12,7 +12,7 @@ race_pct_black	/	B02001_003	B02001_001
 race_pct_hisp	/	B03002_012	B03002_001
 denom_age	=	B01001_001
 age_under25_ma	+	B01001_003	B01001_004
-age_under25_ma	+	age_under25_ma	B01001_004
+age_under25_ma	+	age_under25_ma	B01001_005
 age_under25_ma	+	age_under25_ma	B01001_006
 age_under25_ma	+	age_under25_ma	B01001_007
 age_under25_ma	+	age_under25_ma	B01001_008
@@ -31,7 +31,7 @@ age_over65_ma	+	age_over65_ma	B01001_022
 age_over65_ma	+	age_over65_ma	B01001_023
 age_over65_ma	+	age_over65_ma	B01001_024
 age_over65_ma	+	age_over65_ma	B01001_025
-age_under25_fe	+	B01001_026	B01001_027
+age_under25_fe	+	B01001_027	0
 age_under25_fe	+	age_under25_fe	B01001_028
 age_under25_fe	+	age_under25_fe	B01001_039
 age_under25_fe	+	age_under25_fe	B01001_030
@@ -93,7 +93,7 @@ educ_docterate	+	B15002_018	B15002_035
 educ_docterate	/	educ_docterate	educ_tot_pop
 total_pop_16_plus	=	B23027_001
 worked_past_12_mo_sum	+	B23027_003	B23027_008
-worked_past_12_mo_sum	+worked_past_12_mo_sum	B23027_013
+worked_past_12_mo_sum	+	worked_past_12_mo_sum	B23027_013
 worked_past_12_mo_sum	+	worked_past_12_mo_sum	B23027_018
 worked_past_12_mo_sum	+	worked_past_12_mo_sum	B23027_023
 worked_past_12_mo_sum	+	worked_past_12_mo_sum	B23027_028
@@ -130,16 +130,15 @@ house_pct_7_room	/	B25017_008	denom_house_room
 house_pct_8_room	/	B25017_009	denom_house_room
 house_pct_9_plus_room	/	B25017_010	denom_house_room
 denom_house_yr	=	B25034_001
-house_yr_pct_2014_plus	/	B25034_002	denom_house_yr
-house_yr_pct_2010_2013	/	B25034_003	denom_house_yr
-house_yr_pct_2000_2009	/	B25034_004	denom_house_yr
-house_yr_pct_1990_1999	/	B25034_005	denom_house_yr
-house_yr_pct_1980_1989	/	B25034_006	denom_house_yr
-house_yr_pct_1970_1979	/	B25034_007	denom_house_yr
-house_yr_pct_1960_1969	/	B25034_008	denom_house_yr
-house_yr_pct_1950_1959	/	B25034_009	denom_house_yr
-house_yr_pct_1940_1949	/	B25034_010	denom_house_yr
-house_yr_pct_earlier_1939	/	B25034_011	denom_house_yr
+house_yr_pct_2010_2013	/	B25034_002	denom_house_yr
+house_yr_pct_2000_2009	/	B25034_003	denom_house_yr
+house_yr_pct_1990_1999	/	B25034_004	denom_house_yr
+house_yr_pct_1980_1989	/	B25034_005	denom_house_yr
+house_yr_pct_1970_1979	/	B25034_006	denom_house_yr
+house_yr_pct_1960_1969	/	B25034_007	denom_house_yr
+house_yr_pct_1950_1959	/	B25034_008	denom_house_yr
+house_yr_pct_1940_1949	/	B25034_009	denom_house_yr
+house_yr_pct_earlier_1939	/	B25034_010	denom_house_yr
 denom_heat	=	B25040_001
 heat_pct_utility_gas	/	B25040_002	denom_heat
 heat_pct_bottled_tank_lpgas	/	B25040_003	denom_heat
@@ -181,8 +180,6 @@ house_val_400K_500K	/	B25075_022	house_tot_owned
 house_val_500K_750K	/	B25075_023	house_tot_owned
 house_val_750K_1M	/	B25075_024	house_tot_owned
 house_val_1M_1.5M	/	B25075_025	house_tot_owned
-house_val_1.5M_2M	/	B25075_026	house_tot_owned
-house_val_more_2M	/	B25075_027	house_tot_owned
 denom_house_mort	=	B25081_001
 house_tot_w_mort	/	B25081_002	denom_house_mort
 house_w_1_mort	/	B25081_007	denom_house_mort
