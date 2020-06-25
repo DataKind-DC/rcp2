@@ -5,7 +5,6 @@ channels:
 dependencies:
   - alabaster
   - applaunchservices
-  - appnope
   - argh
   - astroid
   - atomicwrites
@@ -167,7 +166,6 @@ dependencies:
   - python-dateutil
   - python-jsonrpc-server
   - python-language-server
-  - python.app
   - python_abi
   - pytz
   - pyyaml
