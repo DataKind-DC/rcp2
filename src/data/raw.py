@@ -1,4 +1,11 @@
-"""Utilities for working with raw data."""
+"""Utilities for working with raw data.
+
+The following top-level functions can be useful for reading raw data.
+
+- :func:`src.data.raw.read_shapefiles` reads 2010 Census tract shapefiles.
+- :func:`src.data.raw.read_fire_stations` reads fire station data.
+
+"""
 import geopandas
 import pandas as pd
 from src import utils
@@ -72,18 +79,24 @@ class BadPathError(Exception):
 
 def read_shapefiles(states=None, fips=None, glob=None):
     """Read raw 2010 Census tract shapefiles.
-    
-    - Each shapefile has tracts for a state.
-    - From the 2010 Census.
-    - Select only one filter.
-    
+
+    The project raw data includes 56 shapefiles with 2010 Census tract
+    polygons. Each file corresponds to a US state, territory, etc.
+
+    This function facilitates reading and stacking any number of these
+    shapefiles into a single geopandas.GeoDataFrame.
+
+    The caller can specify the shapefiles to use with a list of two-letter
+    state abbreviations, a list of two-digit FIPS codes, or a glob for the file
+    names of interest. The caller can only use one of these filters in a call.
+
     Args:
         states (list): Two-letter state abbreviation strings.
         fips (list): Two-digit state FIPS code strings.
         glob (str): A glob expression (e.g., "*.shp").
         
     Returns:
-        geopandas.DataFrame: Shapes for the states of interest.
+        geopandas.GeoDataFrame: Shapes for the states of interest.
     """
     # Directory with raw shapefiles.
     datadir = utils.DATA["shapefiles-census"]
@@ -129,6 +142,10 @@ def read_shapefiles(states=None, fips=None, glob=None):
 
 
 def read_fire_stations():
-    """Read the raw fire station data."""
+    """Read raw fire station data.
+
+    Returns:
+        pandas.DataFrame: The fire station data.
+    """
     path = utils.DATA["master"] / "Fire Station Location Data.csv"
     return pd.read_csv(path)
