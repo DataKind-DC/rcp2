@@ -45,14 +45,12 @@ def process():
     tracts = raw.read_shapefiles()[["GEOID10", "geometry"]]
     
     # Create points for the lon-lat pair at each fire station.
-    geometry = [] 
-    for coord in zip(stations.Longitude, stations.Latitude):
-        geometry.append(shapely.geometry.Point(coord))
+    geometry = calculate_points(stations.Longitude,
+                                stations.Latitude,
+                                crs=tracts.crs)
     
     # Append the points to the fire station data.
-    stations = geopandas.GeoDataFrame(stations,
-                                      crs="EPSG:4269",
-                                      geometry=geometry)
+    stations = geopandas.GeoDataFrame(stations, geometry=geometry)
     
     # Find the Tract geoid for each station.
     return (geopandas.sjoin(stations, tracts, op="within", how="left")
@@ -81,6 +79,24 @@ def read(process_if_needed=False):
     else:
         result = pd.read_csv(PATH)
     return result
+
+
+def calculate_points(long, lat, *args, **kwargs):
+    """Calculate points in space from longitude and latitude.
+
+    Args:
+        long (array-like): Longitude values.
+        lat (array-like): Latitude values.
+        args: Positial arguments passed to geopandas.GeoSeries.
+        kwargs: Keyword arguments passed to geopandas.GeoSeries.
+
+    Returns:
+        geopandas.GeoSeries: Points for the coordinates given.
+    """
+    geometry = []
+    for coord in zip(long, lat):
+        geometry.append(shapely.geometry.Point(coord))
+    return geopandas.GeoSeries(geometry, *args, **kwargs)
 
 
 if __name__ == "__main__":
