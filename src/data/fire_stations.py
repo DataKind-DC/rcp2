@@ -45,6 +45,25 @@ def process():
                      .pipe(lambda x: pd.DataFrame(x)))
 
 
+def read(process_if_needed=False):
+    """Read processed fire stations data.
+
+    Args:
+        process_if_needed (bool): Process the data if data not found.
+
+    Returns:
+        pandas.DataFrame: Processed fire station data.
+    """
+    if process_if_needed:
+        try:
+            result = pd.read_csv(PATH)
+        except FileNotFoundError:
+            result = process()
+    else:
+        result = pd.read_csv(PATH)
+    return result
+
+
 if __name__ == "__main__":
     # Process the fire stations data.
     stations = process()
