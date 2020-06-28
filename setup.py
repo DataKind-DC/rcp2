@@ -7,6 +7,9 @@ setup(
     description='Project objective',
     author='DataKindDC',
     license='MIT',
+    install_requires=[
+        "geopandas>=0.8.0",
+    ],
     extras_require={
         "tests": "pytest>=5.4.3",
     },
