@@ -126,3 +126,9 @@ def read_shapefiles(states=None, fips=None, glob=None):
     for path in paths:
         chunks.append(geopandas.read_file(path))
     return pd.concat(chunks)    
+
+
+def read_fire_stations():
+    """Read the raw fire station data."""
+    path = utils.DATA["master"] / "Fire Station Location Data.csv"
+    return pd.read_csv(path)
