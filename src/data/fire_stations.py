@@ -71,13 +71,14 @@ def read(process_if_needed=False):
     Returns:
         pandas.DataFrame: Processed fire station data.
     """
+    dtype = {"GEOID10": str}
     if process_if_needed:
         try:
-            result = pd.read_csv(PATH)
+            result = pd.read_csv(PATH, dtype=dtype)
         except FileNotFoundError:
             result = process()
     else:
-        result = pd.read_csv(PATH)
+        result = pd.read_csv(PATH, dtype=dtype)
     return result
 
 
