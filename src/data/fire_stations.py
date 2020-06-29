@@ -51,11 +51,12 @@ def process():
     
     # Append the points to the fire station data.
     stations = geopandas.GeoDataFrame(stations, geometry=geometry)
-    
+
     # Find the Tract geoid for each station.
-    return (geopandas.sjoin(stations, tracts, op="within", how="left")
-                     .drop("geometry", axis=1)
-                     .pipe(lambda x: pd.DataFrame(x)))
+    result = geopandas.sjoin(stations, tracts, op="within", how="left")
+
+    # Return a pandas.DataFrame without geometries.
+    return pd.DataFrame(result).drop("geometry", axis=1)
 
 
 def read(process_if_needed=False):
