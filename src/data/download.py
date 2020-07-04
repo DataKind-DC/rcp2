@@ -8,16 +8,31 @@ downloading files that are already available locally.
 Top level function :func:`src.data.download.fetch` downloads source data files.
 
 Top level variable :data:`src.data.download.SOURCES` is a dict with all the
-source data files that are registered for this project. Add new entries to this
-dict to make them downloadable. New entries should have:
+source data files that are registered for this project. Here's a snippet: ::
+
+    {
+        # National Fire Incident Reporting System (NFIRS) data.
+        "nfirs.csv": {
+            "downloader": "download_from_google_drive",
+            "sha256": "0fcd2c4edae304dbb21c1b0dc6ca9afd17d7d65f21e51cd26571f9d42db7f825",
+            "url": "https://drive.google.com/uc?id=1ENJZwazX7hJ4GwI03DKgX51y-644x-cZ",
+        },
+        ...
+    }
+
+Add more entries to make new files downloadable. New entries should have:
 
 1. A SHA256 hash value to verify download integrity.
 2. A URL for the data source.
 
+You can use :func:`pooch.file_hash` or :mod:`hashlib` to get file hash values.
+
 Optionally, a source can specify a "downloader" function with special
 instructions for downloading a file. The function must be defined somewhere
-and registered in the "downloaders" dict in this module's``fetch`` function.
+and registered in the "downloaders" dict in :func:`src.data.download.fetch`.
 See Pooch documentation on `custom downloaders`_ for details.
+
+Run this module as a script to download project data.
 
 .. _Pooch: https://www.fatiando.org/pooch/latest/index.html
 .. _custom downloaders: https://www.fatiando.org/pooch/latest/usage.html#custom-downloaders
@@ -64,7 +79,7 @@ def fetch(fname):
     function also compares the SHA256 hash of the downloaded file to the one in
     the registry and raises an error if they don't match.
     
-    See :func:`src.data.download.SOURCES` for a list of available files, along
+    See :data:`src.data.download.SOURCES` for a list of available files, along
     with their custom downloaders, SHA256 hashes, and source URLs.
     
     Args:
