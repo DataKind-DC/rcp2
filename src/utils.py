@@ -15,7 +15,8 @@ directories in other scripts and notebooks:
      │   ├── 2010_Census_shapefiles
      │   └── SVI2016_US_shapefiles
      ├── Master Project Data
-     └── processed
+     ├── processed
+     └── raw
 
 """
 import pathlib
@@ -28,6 +29,7 @@ ROOT = pathlib.Path(__file__, "..", "..").resolve()
 # Paths to project data directories.
 DATA = {
     "data": ROOT / "Data",
+    "raw": ROOT / "Data" / "raw",
     "master": ROOT / "Data" / "Master Project Data",
     "processed": ROOT / "Data" / "processed",
     "shapefiles": ROOT / "Data" / "03_Shapefiles",
