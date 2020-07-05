@@ -23,8 +23,8 @@ See Pooch documentation on `custom downloaders`_ for details.
 .. _custom downloaders: https://www.fatiando.org/pooch/latest/usage.html#custom-downloaders
 
 Attributes:
+    PATH (pathlib.Path): The path to the raw data directory.
     SOURCES: (dict): A registry of project data sources.
-    POOCH (pooch.Pooch): An object managing file downloads.
 
 """
 import gdown
@@ -32,26 +32,40 @@ import pooch
 from src import utils
 
 
+# Path to the raw data directory.
+PATH = utils.DATA["raw"]
+
+
 # A registry of all project data sources.
 SOURCES =  {
     "nfirs.csv": {
         "downloader": "download_from_google_drive",
+        "processor": None,
         "sha256": "0fcd2c4edae304dbb21c1b0dc6ca9afd17d7d65f21e51cd26571f9d42db7f825",
         "url": "https://drive.google.com/uc?id=1ENJZwazX7hJ4GwI03DKgX51y-644x-cZ",
     },
 }
 
 
-# A Pooch instance for downloading project files. Used by ``fetch``.
-POOCH = pooch.create(
-    path=utils.DATA["raw"],
-    base_url="",
-    registry={k: v["sha256"] for k, v in SOURCES.items()},
-    urls={k: v["url"] for k, v in SOURCES.items()},
-)
+def get_pooch(path, sources):
+    """Return a ``pooch.Pooch`` instance for downloading data.
+
+    Args:
+        path (str): The local directory where files will be stored.
+        sources (dict): A registry of files available for download.
+
+    Returns:
+        pooch.Pooch: A Pooch instance for downloading project files.
+    """
+    return pooch.create(
+        path=path,
+        base_url="",
+        registry={k: v["sha256"] for k, v in sources.items()},
+        urls={k: v["url"] for k, v in sources.items()},
+    )
 
 
-def fetch(fname):
+def fetch(fname, path=None, sources=None):
     """Fetch a project file.
     
     This function downloads a source file to the project raw data directory.
@@ -69,16 +83,32 @@ def fetch(fname):
     
     Args:
         fname: The base name of the file to fetch (e.g., "my-file.csv").
+        path (str): The local directory where files will be stored.
+        sources (dict): A registry of files available for download.
         
     Returns:
         str: The path to the downloaded file.
 
     """
+    # Use the PATH defined in this file by default.
+    if not path:
+        path = PATH
+
+    # Use the SOURCES defined in this file by default.
+    if not sources:
+        sources = SOURCES
+
     downloaders = {
         "download_from_google_drive": download_from_google_drive,
     }
-    downloader = downloaders.get(SOURCES[fname].get("downloader"))
-    return POOCH.fetch(fname, downloader=downloader)
+
+    processors = {
+        "declare_action": declare_action,
+    }
+
+    downloader = downloaders.get(sources[fname].get("downloader"))
+    processor = processors[sources[fname]["processor"]]
+    return get_pooch(path, sources).fetch(fname, downloader=downloader, processor=processor)
 
 
 def download_from_google_drive(url, output_file, pooch):
@@ -111,3 +141,8 @@ def download_from_google_drive(url, output_file, pooch):
     
     """
     gdown.download(url, output=output_file)
+
+
+def declare_action(fname, action, pooch):
+    """Declare the download action taken."""
+    return (fname, action)
