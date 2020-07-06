@@ -15,6 +15,6 @@ setup(
         "Shapely>=1.7.0",
     ],
     extras_require={
-        "tests": "pytest>=5.4.3",
+        "tests": ["pytest>=5.4.3", "responses>=0.10.15"],
     },
 )
