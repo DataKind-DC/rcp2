@@ -11,20 +11,25 @@ Top level variable :data:`src.data.download.SOURCES` is a dict with all the
 source data files that are registered for this project. Add new entries to this
 dict to make them downloadable. New entries should have:
 
-1. A SHA256 hash value to verify download integrity.
-2. A URL for the data source.
+- ``fname``: The file basename.
+- ``url``: The URL for download from.
+- ``known_hash``: The file's SHA256 hash value to verify download integrity.
 
-Optionally, a source can specify a "downloader" function with special
-instructions for downloading a file. The function must be defined somewhere
-and registered in the "downloaders" dict in this module's``fetch`` function.
-See Pooch documentation on `custom downloaders`_ for details.
+Optionally, a source can specify ``downloader`` and ``processor`` functions
+with special instructions for downloading and processing (e.g., unzipping) a
+file. The values for these items can be functions or or strings that are mapped
+to functions in either ``src.data.download.DOWNLOADERS`` or
+``src.data.download.PROCESSORS``. For details, see Pooch documentation on
+`custom downloaders`_ `and post-processing hooks`_.
 
 .. _Pooch: https://www.fatiando.org/pooch/latest/index.html
 .. _custom downloaders: https://www.fatiando.org/pooch/latest/usage.html#custom-downloaders
+.. _post-processing hooks: https://www.fatiando.org/pooch/latest/usage.html#post-processing-hooks
 
 Attributes:
-    PATH (pathlib.Path): The path to the raw data directory.
-    SOURCES: (dict): A registry of project data sources.
+    SOURCES (dict): A registry of project data sources.
+    DOWNLOADERS (dict): A registry of special downloading functions.
+    PROCESSORS (dict): A registry of special post-processing functions.
 
 """
 import gdown
@@ -32,83 +37,75 @@ import pooch
 from src import utils
 
 
-# Path to the raw data directory.
-PATH = utils.DATA["raw"]
-
-
 # A registry of all project data sources.
-SOURCES =  {
+SOURCES = {
     "nfirs.csv": {
-        "downloader": "download_from_google_drive",
-        "processor": None,
-        "sha256": "0fcd2c4edae304dbb21c1b0dc6ca9afd17d7d65f21e51cd26571f9d42db7f825",
+        "fname": "nfirs.csv",
         "url": "https://drive.google.com/uc?id=1ENJZwazX7hJ4GwI03DKgX51y-644x-cZ",
+        "known_hash": "0fcd2c4edae304dbb21c1b0dc6ca9afd17d7d65f21e51cd26571f9d42db7f825",
+        "downloader": "download_from_google_drive",
     },
 }
 
 
-def get_pooch(path, sources):
-    """Return a ``pooch.Pooch`` instance for downloading data.
-
-    Args:
-        path (str): The local directory where files will be stored.
-        sources (dict): A registry of files available for download.
-
-    Returns:
-        pooch.Pooch: A Pooch instance for downloading project files.
-    """
-    return pooch.create(
-        path=path,
-        base_url="",
-        registry={k: v["sha256"] for k, v in sources.items()},
-        urls={k: v["url"] for k, v in sources.items()},
-    )
+# A registry of special downloading functions.
+DOWNLOADERS = {
+    "download_from_google_drive": lambda x, y, z: download_from_google_drive(x, y, z),
+}
 
 
-def fetch(fname, path=None, sources=None):
+# A registry of special post-processing functions.
+PROCESSORS = {
+}
+
+
+def fetch(url, fname=None, known_hash=None,
+          path=None, downloader=None, processor=None):
     """Fetch a project file.
     
     This function downloads a source file to the project raw data directory.
-    The function first checks for an up-to-date local copy of the file. If it
-    finds one, then it checks its SHA256 hash against the known hash registered
-    for the file. If the hashes match, then this function skips the download.
-    
+    The function first checks for an up-to-date local copy of the file in
+    ``path``. If it finds one, then it checks its SHA256 hash against the
+    ``known_hash``. If the hashes match, then this function skips the download.
+
     If the function doesn't find a local copy of the file, or if the local hash
-    doesn't match the registry, then this function downloads the file. The
-    function also compares the SHA256 hash of the downloaded file to the one in
-    the registry and raises an error if they don't match.
+    doesn't match the known hash, then this function downloads the file. The
+    function also compares the SHA256 hash of the downloaded file to the known
+    hash and raises an error if they don't match.
+
+    See :func:`src.data.download.SOURCES` for a dict of registered project
+    files. Each item's contents can serve as arguments for this function. ::
     
-    See :func:`src.data.download.SOURCES` for a list of available files, along
-    with their custom downloaders, SHA256 hashes, and source URLs.
+      >>>from src.data import download
+      >>>download.fetch(**download.SOURCES["my-file.csv"])
+      "/path/to/my-file.csv"
     
     Args:
-        fname: The base name of the file to fetch (e.g., "my-file.csv").
-        path (str): The local directory where files will be stored.
-        sources (dict): A registry of files available for download.
+        url (str): The URL to download data from.
+        fname (str): The base name of the file to fetch (e.g., "my-file.csv").
+        known_hash (str): The file's SHA256 hash value.
+        path (str): Directory in which to store the file.
+        downloader (str, callable): A special downloading function.
+        processor (str, callable): A special post-processing function.
         
     Returns:
         str: The path to the downloaded file.
 
     """
-    # Use the PATH defined in this file by default.
+    # Use the default raw data directory if none is given.
     if not path:
-        path = PATH
+        path = utils.DATA["raw"]
 
-    # Use the SOURCES defined in this file by default.
-    if not sources:
-        sources = SOURCES
+    # Look up the downloader function if needed.
+    if type(downloader) == str:
+        downloader = DOWNLOADERS[downloader]
 
-    downloaders = {
-        "download_from_google_drive": download_from_google_drive,
-    }
+    # Look up the processor function if needed.
+    if type(processor) == str:
+        processor = PROCESSORS[processor]
 
-    processors = {
-        "declare_action": declare_action,
-    }
-
-    downloader = downloaders.get(sources[fname].get("downloader"))
-    processor = processors[sources[fname]["processor"]]
-    return get_pooch(path, sources).fetch(fname, downloader=downloader, processor=processor)
+    return pooch.retrieve(url, known_hash, fname=fname, path=path,
+                          downloader=downloader, processor=processor)
 
 
 def download_from_google_drive(url, output_file, pooch):
@@ -119,7 +116,8 @@ def download_from_google_drive(url, output_file, pooch):
     package so that a ``pooch.Pooch`` instance can fetch Google Drive files. 
     
     Don't call this function directly. Instead, it works as the ``download``
-    argument for ``Pooch.fetch``. See the `Pooch documentation`_ for details.
+    argument for ``pooch.Pooch.fetch`` or ``pooch.retrieve``. See the `Pooch
+    documentation`_ for details.
     
     To get the ``url`` for a file in Google Drive, use this template: ::
     
@@ -141,8 +139,3 @@ def download_from_google_drive(url, output_file, pooch):
     
     """
     gdown.download(url, output=output_file)
-
-
-def declare_action(fname, action, pooch):
-    """Declare the download action taken."""
-    return (fname, action)
