@@ -155,3 +155,8 @@ def download_from_google_drive(url, output_file, pooch):
     
     """
     gdown.download(url, output=output_file)
+
+
+if __name__ == "__main__":
+    # Download the project source data.
+    fetch(**SOURCES["nfirs.csv"])
