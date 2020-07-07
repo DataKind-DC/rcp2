@@ -8,7 +8,9 @@ The following top-level functions can be useful for reading raw data.
 """
 import geopandas
 import pandas as pd
+import numpy as np
 from src import utils
+import os
 
 
 # Map state names to state FIPS codes.
@@ -149,3 +151,111 @@ def read_fire_stations():
     """
     path = utils.DATA["master"] / "Fire Station Location Data.csv"
     return pd.read_csv(path)
+
+def ingest_raw_nfirs_data(data_dir, output_dir, year):
+    """Ingest single year of raw nfirs data, perform basic cleaning, merging, and filtering to 
+    generate one years worth of nfirs data ready to be geocoded.
+    
+    Args:
+        data_dir: nfirs directory with one year of data
+        output_dir: output directory filepath
+        year: year corresponding to nfirs data
+        
+    Returns:
+        pandas dataframe of cleaned nfirs data (not geocoded yet)
+    """
+    
+    # Read tables and switch columns to lower case
+    basic = pd.read_csv(os.path.join(data_dir, 'basicincident.txt'), sep = '^', encoding = 'latin-1', low_memory = False)
+    address = pd.read_csv(os.path.join(data_dir, 'incidentaddress.txt'), sep = '^', encoding = 'latin-1', low_memory = False)
+    fire = pd.read_csv(os.path.join(data_dir, 'fireincident.txt'), sep = '^', encoding = 'latin-1', low_memory = False)
+    
+    basic.columns = basic.columns.str.lower()
+    address.columns = address.columns.str.lower()
+    fire.columns = fire.columns.str.lower()
+    
+    # Columns to merge the 3 datasets on
+    merge_cols = ['state','fdid','inc_date','inc_no','exp_no']
+    
+    # Drop duplicates based on those merge columns. For nfirs 2016, there were 110 duplicates
+    # dropped from the basic table, 65 from the address table, and 5 from the fire table. 
+    basic = basic.drop_duplicates(merge_cols)
+    address = address.drop_duplicates(merge_cols)
+    fire = fire.drop_duplicates(merge_cols)
+    
+    # Subset the basic data by inc_type and prop_use values which correspond to home fires
+    inc_type_vals = [111, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122]
+    prop_use_vals = ['419','429']
+    
+    mask1 = basic['inc_type'].isin(inc_type_vals)
+    mask2 = basic['prop_use'].isin(prop_use_vals)
+
+    basic = basic[mask1 & mask2]
+    
+    # Left join the address and fire tables to the basic table
+    df = (basic.merge(address, how = 'left', on = merge_cols, indicator = 'address_merge')
+      .merge(fire, how = 'left', on = merge_cols, indicator = 'fire_merge')
+     )
+    
+    # Convert the address to a datetime object
+    df['inc_date'] = pd.to_datetime(df['inc_date'].astype(str).str.zfill(8), format = '%m%d%Y')
+        
+    ### Combine the street address parts into a single address field
+    # Clean address parts
+    address_parts = ['num_mile','street_pre','streetname','streettype','streetsuf']
+    for part in address_parts:
+        df[part] = df[part].fillna('').astype(str).str.upper()
+
+    # Some streetnames included the street_pre as part of the field (i.e. N N 21st st, or E E John Blvd). This
+    # line replaces street_pre with '' if that is the case
+    df['street_pre'] = np.where(df['street_pre'] == df['streetname'].str.split(' ').str[0], '', df['street_pre'])
+
+    # Combines and cleans the address parts into a single address field
+    df['address'] = df['num_mile'] + ' ' + df['street_pre'] + ' ' + df['streetname'] + ' ' + df['streettype'] + ' ' +\
+                    df['streetsuf']
+    df['address'] = df['address'].str.replace('\s+',' ', regex=True).str.strip()
+    
+    # Subset the data by only those records which have a zip code
+    df = df[df['zip5'].notnull()]
+    
+    # Fill null values for state (which corresponds to the state the fire department is in) with the state_id (which corresponds
+    # to the state where the fire occurred. 99% of the time these are the same). Do the same for state_id using state.
+    # In 2016 there were 19 null values for state, and 4 for state_id
+    df['state_id'] = df['state_id'].fillna(df['state'])
+    df['state'] = df['state'].fillna(df['state_id'])
+    
+    # Fill null values for oth_inj and oth_death with 0. Assumption is that if there were really an injury or death, these 
+    # fields would have been filled out. 
+    df['oth_inj'] = df['oth_inj'].fillna(0)
+    df['oth_death'] = df['oth_death'].fillna(0)
+    
+    # Fill null values for prop_loss and cont_loss with 0. Assumption is that if there were really a large property 
+    # loss or content loss then these fields would have been filled out. 
+    df['prop_loss'] = df['prop_loss'].fillna(0)
+    df['cont_loss'] = df['cont_loss'].fillna(0)
+    
+    # Calculate the total loss column
+    df['tot_loss'] = df['prop_loss'] + df['cont_loss']
+    
+    # Convert fdid column to str, and left pad with zeros to match documentation
+    df['fdid'] = df['fdid'].astype(str).str.zfill(5)
+
+    # Create st_fdid column with unique identifier for each fire department in the country
+    df['st_fdid'] = df['state'] + '_' + df['fdid']
+    
+    # Zero pad dept_sta column to align with documentation
+    df['dept_sta'] = (df['dept_sta'].astype(str)
+                      .str.zfill(3)
+                      .replace('nan',np.nan))
+    
+    # Capitalize cities
+    df['city'] = df['city'].astype(str).str.upper()
+    
+    # Subset the data by the columns we've selected for further use
+    usecols = ['state','fdid','st_fdid','dept_sta','inc_date','inc_no','exp_no','inc_type','prop_use','address','city','state_id',
+              'zip5','oth_inj','oth_death','prop_loss','cont_loss','tot_loss','detector','det_type','det_power',
+              'det_operat','det_effect','det_fail','aes_pres','aes_type','aes_oper','no_spr_op','aes_fail']
+    
+    df = df[usecols]
+    
+    return(df)
