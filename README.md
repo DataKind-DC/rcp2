@@ -24,9 +24,9 @@ Download anaconda ( https://anaconda.org/)
 
 go to command line ( or anaconda terminal) and navigate to this directory (usually documents/github/rcp2)
   ```
-  conda create -n RCP2 python=3 -c conda-forge
+  conda env create -f environment.yml 
   conda activate RCP2
-  conda install --file requirements.txt
+  jupyter lab
   ```
   This will create your environment and activate and you'll be ready to go. 
 
@@ -90,14 +90,11 @@ Project Organization
     │
     ├── models             <- Trained and serialized models, model predictions, or model summaries
     │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
+    ├── notebooks          <- Jupyter notebooks in progress. Naming convention is a number (for ordering),
     │                         the creator's initials, and a short `-` delimited description, e.g.
     │                         `1.0-jqp-initial-data-exploration`.
     │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials (moved to google drive in Master                                                                                                project data).
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
+    ├── references         <- Data dictionaries, manuals, and all other explanatory materials (moved to google drive in Master)                                                                                                project data).
     │
     |.  ----(not currently implemented) ---- 
     |          Future roadmap
