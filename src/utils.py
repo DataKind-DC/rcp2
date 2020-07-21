@@ -30,6 +30,7 @@ ROOT = pathlib.Path(__file__, "..", "..").resolve()
 DATA = {
     "data": ROOT / "Data",
     "raw": ROOT / "Data" / "raw",
+    "interim": ROOT / "Data" / 'interim',
     "master": ROOT / "Data" / "Master Project Data",
     "processed": ROOT / "Data" / "processed",
     "shapefiles": ROOT / "Data" / "03_Shapefiles",
