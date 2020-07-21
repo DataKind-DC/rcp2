@@ -8,9 +8,7 @@ The following top-level functions can be useful for reading raw data.
 """
 import geopandas
 import pandas as pd
-import numpy as np
 from src import utils
-import os
 
 
 # Map state names to state FIPS codes.
@@ -151,5 +149,3 @@ def read_fire_stations():
     """
     path = utils.DATA["master"] / "Fire Station Location Data.csv"
     return pd.read_csv(path)
-
-
