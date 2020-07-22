@@ -3,3 +3,6 @@
 
 # Required
 version: 2
+
+conda:
+  environment: environment.yml
