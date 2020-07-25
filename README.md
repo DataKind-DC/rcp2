@@ -10,6 +10,11 @@ Phase 2 has three primary objectives:
 1.	Refine and update risk model to include smaller geographic areas and new data.
 2.	Set up a method so that the model can easily be refreshed by the Red Cross team when new home fire datasets are available.
 
+## Documentation
+
+See project [documentation](https://rcp2-nbanion.readthedocs.io/en/docs/) for an
+API reference.
+
 ## Quickstart Guide
 Here is the general overview of the steps you'll need to perform to get started on our project. For a more details on any of the steps read getting-started.md located in the Docs folder.  
 
