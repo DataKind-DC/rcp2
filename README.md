@@ -1,4 +1,4 @@
-
+[![Documentation Status](https://readthedocs.org/projects/rcp2-nbanion/badge/?version=docs)](https://rcp2-nbanion.readthedocs.io/en/latest/?badge=docs)
 
 
 # Red Cross Fire Risk Map v2
