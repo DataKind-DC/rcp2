@@ -6,6 +6,10 @@
 RCP-2 documentation!
 ==============================================
 
+See the project source code on GitHub_.
+
+.. _GitHub: https://github.com/DataKind-DC/rcp2
+
 Contents:
 
 .. toctree::
