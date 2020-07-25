@@ -13,6 +13,7 @@ Contents:
 
    getting-started
    commands
+   contributing
    download
 
 
