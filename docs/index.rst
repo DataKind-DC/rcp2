@@ -12,6 +12,4 @@ A project to support Red Cross smoke detector installation campaigns.
    :maxdepth: 2
    :hidden:
 
-   getting-started
-   commands
    download
