@@ -51,7 +51,34 @@ Example: `python prep_acs_tract_block.py 2016 Alaska RhodeIsland --template_fold
 
 ### Full Specification
 ```
+usage: prep_acs_tract_block.py [-h] [-a] [-tf TEMPLATE_FOLDER]
+                               [-sp STATE_PATH] [-ct] [-mv MAX_VARS]
+                               [-op OUTPUT_PATH]
+                               year state [state ...]
 
+Prep ACS data
+
+positional arguments:
+  year                  four digit year
+  state                 state full name
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a, --all             download all data for a given year. only max_vars and
+                        output_path parameters are applied
+  -tf TEMPLATE_FOLDER, --template_folder TEMPLATE_FOLDER
+                        template folder path. if None, will download to
+                        templates/
+  -sp STATE_PATH, --state_path STATE_PATH
+                        raw state data path. if None, will download to state
+                        folder
+  -ct, --check_types    check data types on load
+  -mv MAX_VARS, --max_vars MAX_VARS
+                        approximate number of variables to output per file.
+                        the script allows up to 10 pct more to keep the number
+                        of files down
+  -op OUTPUT_PATH, --output_path OUTPUT_PATH
+                        path to write raw files to
 ```
 
 -----
