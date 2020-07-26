@@ -1,4 +1,4 @@
-[![Documentation Status](https://readthedocs.org/projects/rcp2-nbanion/badge/?version=docs)](https://rcp2-nbanion.readthedocs.io/en/latest/?badge=docs)
+[![Documentation Status](https://readthedocs.org/projects/red-cross-fire-risk-map-v2/badge/?version=latest)](https://red-cross-fire-risk-map-v2.readthedocs.io/en/latest/?badge=latest)
 
 
 # Red Cross Fire Risk Map v2
@@ -12,8 +12,8 @@ Phase 2 has three primary objectives:
 
 ## Documentation
 
-See project [documentation](https://rcp2-nbanion.readthedocs.io/en/docs/) for an
-API reference.
+See project [documentation](https://red-cross-fire-risk-map-v2.readthedocs.io/en/latest/)
+for an API reference.
 
 ## Quickstart Guide
 Here is the general overview of the steps you'll need to perform to get started on our project. For a more details on any of the steps read getting-started.md located in the Docs folder.  
