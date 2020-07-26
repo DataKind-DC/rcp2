@@ -53,9 +53,9 @@ def build_column_lookup(year, template_folder=None):
 
     template_files = os.listdir(temp_folder)
     template_files = [f for f in template_files if \
-                      re.match('seq\d+\.xls', f, re.IGNORECASE)]
+                      re.match('seq\d+\.xlsx*', f, re.IGNORECASE)]
     for f in template_files:
-        seq_num = int(re.sub('seq(\d+)\.xls', '\\1', f, flags=re.IGNORECASE))
+        seq_num = int(re.sub('seq(\d+)\.xlsx*', '\\1', f, flags=re.IGNORECASE))
         temp = pd.read_excel('{tf}/{f}'.format(tf=temp_folder, f=f))
         data_cols = list(temp.columns)[6:]
         temp = temp[data_cols]
@@ -113,12 +113,22 @@ def build_geo_lookup(state_path, template_folder, year):
     :return: pandas dataframe
     """
 
-    header_path = '{tf}/{y}_SFGeoFileTemplate.xls'.format(tf=template_folder, 
-                                                       y=year)
-    if not os.path.exists(header_path):
-        header_path = '{tf}/templates/{y}_SFGeoFileTemplate.xls'.\
-                   format(tf=template_folder, y=year)
+    # get header file, accounting for multiple folder structures, xls vs xlsx
+    header_file_stub = '{y}_SFGeoFileTemplate.xls'.format(y=year)
+    check_locations = ['{tf}/{f}', '{tf}/{f}x', '{tf}/templates/{f}', 
+                       '{tf}/templates/{f}x']
+    header_path = None
+    for loc in check_locations:
+        loc_str = loc.format(tf=template_folder, f=header_file_stub)
+        if os.path.exists(loc_str):
+            header_path = loc_str
+            break
+    if not header_path:
+        logging.error('unable to find {} in {}'\
+                      .format(header_file_stub, template_folder))
+        return
 
+    # read and process geographic lookup file
     try:
         geo_header = pd.read_excel(header_path)
         state_files = os.listdir(state_path)
