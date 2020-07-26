@@ -1,11 +1,11 @@
+# Red Cross Fire Risk Map v2
+
 [![Documentation Status](https://readthedocs.org/projects/red-cross-fire-risk-map-v2/badge/?version=latest)](https://red-cross-fire-risk-map-v2.readthedocs.io/en/latest/?badge=latest)
 
-
-# Red Cross Fire Risk Map v2
 What areas in the USA are at the highest risk of home fires, and where should the American Red Cross go to install smoke alarms?
 
 In Phase 1 DKDC created 6 models to analyze fire response data, smoke alarm data, and census data to assign a fire risk score to census tracts across the United States. The results from these models helped generate a map of high-risk census tracts across the United States, which informed planning and helped us adjudicate resources. Now, DKDC has been asked to replicate this effort at a census block level (a smaller geographic unit), so that the Red Cross can more efficiently target smoke detector distribution efforts. This phase of work will help ensure fire alarms are handed out where they are most needed.
- 
+
 Phase 2 has three primary objectives:
 1.	Refine and update risk model to include smaller geographic areas and new data.
 2.	Set up a method so that the model can easily be refreshed by the Red Cross team when new home fire datasets are available.
