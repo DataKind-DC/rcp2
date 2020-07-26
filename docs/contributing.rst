@@ -53,7 +53,7 @@ We recommend following `Google docstring conventions`_ for uniform
 docstrings. The project documentation uses the napoleon_ Sphinx extension to
 render these docstrings into readable html.
 
-.. _ReStructuredText_: https://docutils.sourceforge.io/rst.html
+.. _ReStructuredText: https://docutils.sourceforge.io/rst.html
 .. _Google docstring conventions: https://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_google.html
 .. _napoleon: https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html
 
@@ -67,7 +67,7 @@ They enable us to verify assumptions about the code we write and to make sure
 that new code doesn't break old code.
 
 This project uses the pytest_ unit testing framework. New unit tests go in the
-```src/tests/`` directory in python scripts named ``test_*.py``. Each test is a
+``src/tests/`` directory in python scripts named ``test_*.py``. Each test is a
 function that starts with the prefix "test\_". To run unit tests, run ::
 
   $ pytest
