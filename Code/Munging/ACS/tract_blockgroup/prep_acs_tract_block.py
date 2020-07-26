@@ -9,7 +9,18 @@ import argparse
 import re
 import pathlib
 import shutil
-import pdb
+
+STATE_NAMES = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 
+               'Colorado', 'Connecticut', 'Delaware', 'DistrictOfColumbia', 
+               'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 
+               'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 
+               'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 
+               'Missouri', 'Montana', 'Nebraska', 'Nevada', 'NewHampshire', 
+               'NewJersey', 'NewMexico', 'NewYork', 'NorthCarolina', 
+               'NorthDakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 
+               'RhodeIsland', 'SouthCarolina', 'SouthDakota', 'Tennessee', 
+               'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 
+               'WestVirginia', 'Wisconsin', 'Wyoming']
 
 def build_column_lookup(year, template_folder=None):
     """ create lookup from code to variable label from template data
@@ -322,13 +333,15 @@ def prep_acs_main(state, year, template_folder=None, state_path=None,
         there are over 22,000 variables total which takes hours to export as one
             big file
     :param output_path: string path to write raw files to
-        default: acs_output/
+        default: acs_{year}_output/
 
     :return: None
     """
 
     logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO)
+    num_logger = logging.getLogger('numexpr')
+    num_logger.setLevel(logging.ERROR)
 
     logging.info('start of prep_acs for {st} in {y}'.format(st=state, y=year))
 
@@ -377,12 +390,46 @@ def prep_acs_main(state, year, template_folder=None, state_path=None,
     logging.info('prep_acs completed for {st} in {y}'.format(st=state, y=year))
 
 
+def prep_acs_full(year, max_vars=2000, output_path='acs_{year}_output/'):
+    """ download and prep all ACS data for a given year
+
+    Convenience method to download all data for a given year.  This will take
+    multiple hours to run.
+
+    :param year: int four-digit year
+    :param max_vars: number of variables to output per file
+        default: 2000
+        there are over 22,000 variables total which takes hours to export as one
+            big file
+    :param output_path: string path to write raw files to
+        default: acs_{year}_output/
+
+    :return: None
+    """
+
+    # start with last state, Wyoming, since its small
+    state = STATE_NAMES.pop()
+    prep_acs_main(state, year, template_folder=None, 
+        state_path=None, check_types=True, max_vars=max_vars, 
+        output_path=output_path)    
+
+    for state in STATE_NAMES:
+        prep_acs_main(state, year, template_folder='templates_{}'.format(year), 
+            state_path=None, check_types=False, max_vars=max_vars, 
+            output_path=output_path)    
+
+    return
+
+
 def prep_acs_cmd():
 
     parser = argparse.ArgumentParser(description='Prep ACS data')
     parser.add_argument('year', type=int, help='four digit year')
     parser.add_argument('state', type=str, help='state full name', nargs='+')
 
+    parser.add_argument('-a', '--all', default=False, action='store_true',
+        help='download all data for a given year.  '
+             'only max_vars and output_path parameters are applied')
     parser.add_argument('-tf', '--template_folder', default=None,
         help='template folder path. if None, will download to templates/')
     parser.add_argument('-sp', '--state_path', default=None,
@@ -396,10 +443,15 @@ def prep_acs_cmd():
         help='path to write raw files to')
 
     args = parser.parse_args()
-    for st in args.state:
-        prep_acs_main(st, args.year, template_folder=args.template_folder, 
-            state_path=args.state_path, check_types=args.check_types,
-            max_vars=args.max_vars, output_path=args.output_path)
+
+    if args.all:
+        prep_acs_full(args.year, max_vars=args.max_vars, 
+                      output_path=args.output_path)
+    else:
+        for st in args.state:
+            prep_acs_main(st, args.year, template_folder=args.template_folder, 
+                state_path=args.state_path, check_types=args.check_types,
+                max_vars=args.max_vars, output_path=args.output_path)
 
 
 if __name__ == '__main__':
