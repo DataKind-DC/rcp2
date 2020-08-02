@@ -16,4 +16,5 @@ See the source code on GitHub_.
    :maxdepth: 2
    :hidden:
 
+   contributing
    download
