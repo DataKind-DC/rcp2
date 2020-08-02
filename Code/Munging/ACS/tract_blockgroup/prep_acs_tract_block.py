@@ -9,7 +9,18 @@ import argparse
 import re
 import pathlib
 import shutil
-import pdb
+
+STATE_NAMES = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 
+               'Colorado', 'Connecticut', 'Delaware', 'DistrictOfColumbia', 
+               'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 
+               'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 
+               'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 
+               'Missouri', 'Montana', 'Nebraska', 'Nevada', 'NewHampshire', 
+               'NewJersey', 'NewMexico', 'NewYork', 'NorthCarolina', 
+               'NorthDakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 
+               'RhodeIsland', 'SouthCarolina', 'SouthDakota', 'Tennessee', 
+               'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 
+               'WestVirginia', 'Wisconsin', 'Wyoming']
 
 def build_column_lookup(year, template_folder=None):
     """ create lookup from code to variable label from template data
@@ -53,9 +64,9 @@ def build_column_lookup(year, template_folder=None):
 
     template_files = os.listdir(temp_folder)
     template_files = [f for f in template_files if \
-                      re.match('seq\d+\.xls', f, re.IGNORECASE)]
+                      re.match('seq\d+\.xlsx*', f, re.IGNORECASE)]
     for f in template_files:
-        seq_num = int(re.sub('seq(\d+)\.xls', '\\1', f, flags=re.IGNORECASE))
+        seq_num = int(re.sub('seq(\d+)\.xlsx*', '\\1', f, flags=re.IGNORECASE))
         temp = pd.read_excel('{tf}/{f}'.format(tf=temp_folder, f=f))
         data_cols = list(temp.columns)[6:]
         temp = temp[data_cols]
@@ -113,12 +124,22 @@ def build_geo_lookup(state_path, template_folder, year):
     :return: pandas dataframe
     """
 
-    header_path = '{tf}/{y}_SFGeoFileTemplate.xls'.format(tf=template_folder, 
-                                                       y=year)
-    if not os.path.exists(header_path):
-        header_path = '{tf}/templates/{y}_SFGeoFileTemplate.xls'.\
-                   format(tf=template_folder, y=year)
+    # get header file, accounting for multiple folder structures, xls vs xlsx
+    header_file_stub = '{y}_SFGeoFileTemplate.xls'.format(y=year)
+    check_locations = ['{tf}/{f}', '{tf}/{f}x', '{tf}/templates/{f}', 
+                       '{tf}/templates/{f}x']
+    header_path = None
+    for loc in check_locations:
+        loc_str = loc.format(tf=template_folder, f=header_file_stub)
+        if os.path.exists(loc_str):
+            header_path = loc_str
+            break
+    if not header_path:
+        logging.error('unable to find {} in {}'\
+                      .format(header_file_stub, template_folder))
+        return
 
+    # read and process geographic lookup file
     try:
         geo_header = pd.read_excel(header_path)
         state_files = os.listdir(state_path)
@@ -312,13 +333,15 @@ def prep_acs_main(state, year, template_folder=None, state_path=None,
         there are over 22,000 variables total which takes hours to export as one
             big file
     :param output_path: string path to write raw files to
-        default: acs_output/
+        default: acs_{year}_output/
 
     :return: None
     """
 
     logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO)
+    num_logger = logging.getLogger('numexpr')
+    num_logger.setLevel(logging.ERROR)
 
     logging.info('start of prep_acs for {st} in {y}'.format(st=state, y=year))
 
@@ -367,12 +390,46 @@ def prep_acs_main(state, year, template_folder=None, state_path=None,
     logging.info('prep_acs completed for {st} in {y}'.format(st=state, y=year))
 
 
+def prep_acs_full(year, max_vars=2000, output_path='acs_{year}_output/'):
+    """ download and prep all ACS data for a given year
+
+    Convenience method to download all data for a given year.  This will take
+    multiple hours to run.
+
+    :param year: int four-digit year
+    :param max_vars: number of variables to output per file
+        default: 2000
+        there are over 22,000 variables total which takes hours to export as one
+            big file
+    :param output_path: string path to write raw files to
+        default: acs_{year}_output/
+
+    :return: None
+    """
+
+    # start with last state, Wyoming, since its small
+    state = STATE_NAMES.pop()
+    prep_acs_main(state, year, template_folder=None, 
+        state_path=None, check_types=True, max_vars=max_vars, 
+        output_path=output_path)    
+
+    for state in STATE_NAMES:
+        prep_acs_main(state, year, template_folder='templates_{}'.format(year), 
+            state_path=None, check_types=False, max_vars=max_vars, 
+            output_path=output_path)    
+
+    return
+
+
 def prep_acs_cmd():
 
     parser = argparse.ArgumentParser(description='Prep ACS data')
     parser.add_argument('year', type=int, help='four digit year')
     parser.add_argument('state', type=str, help='state full name', nargs='+')
 
+    parser.add_argument('-a', '--all', default=False, action='store_true',
+        help='download all data for a given year.  '
+             'only max_vars and output_path parameters are applied')
     parser.add_argument('-tf', '--template_folder', default=None,
         help='template folder path. if None, will download to templates/')
     parser.add_argument('-sp', '--state_path', default=None,
@@ -386,10 +443,15 @@ def prep_acs_cmd():
         help='path to write raw files to')
 
     args = parser.parse_args()
-    for st in args.state:
-        prep_acs_main(st, args.year, template_folder=args.template_folder, 
-            state_path=args.state_path, check_types=args.check_types,
-            max_vars=args.max_vars, output_path=args.output_path)
+
+    if args.all:
+        prep_acs_full(args.year, max_vars=args.max_vars, 
+                      output_path=args.output_path)
+    else:
+        for st in args.state:
+            prep_acs_main(st, args.year, template_folder=args.template_folder, 
+                state_path=args.state_path, check_types=args.check_types,
+                max_vars=args.max_vars, output_path=args.output_path)
 
 
 if __name__ == '__main__':
