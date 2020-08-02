@@ -8,6 +8,10 @@ Red Cross Fire Risk Map V2
 
 A project to support Red Cross smoke detector installation campaigns.
 
+See the source code on GitHub_.
+
+.. _GitHub: https://github.com/DataKind-DC/rcp2
+
 .. toctree::
    :maxdepth: 2
    :hidden:
