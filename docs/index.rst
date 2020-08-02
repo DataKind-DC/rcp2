@@ -3,22 +3,18 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-RCP-2 documentation!
-==============================================
+Red Cross Fire Risk Map V2
+==========================
 
-Contents:
+A project to support Red Cross smoke detector installation campaigns.
+
+See the source code on GitHub_.
+
+.. _GitHub: https://github.com/DataKind-DC/rcp2
 
 .. toctree::
    :maxdepth: 2
+   :hidden:
 
-   getting-started
-   commands
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   contributing
+   download

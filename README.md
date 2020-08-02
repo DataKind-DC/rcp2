@@ -1,14 +1,19 @@
-
-
-
 # Red Cross Fire Risk Map v2
+
+[![Documentation Status](https://readthedocs.org/projects/red-cross-fire-risk-map-v2/badge/?version=latest)](https://red-cross-fire-risk-map-v2.readthedocs.io/en/latest/?badge=latest)
+
 What areas in the USA are at the highest risk of home fires, and where should the American Red Cross go to install smoke alarms?
 
 In Phase 1 DKDC created 6 models to analyze fire response data, smoke alarm data, and census data to assign a fire risk score to census tracts across the United States. The results from these models helped generate a map of high-risk census tracts across the United States, which informed planning and helped us adjudicate resources. Now, DKDC has been asked to replicate this effort at a census block level (a smaller geographic unit), so that the Red Cross can more efficiently target smoke detector distribution efforts. This phase of work will help ensure fire alarms are handed out where they are most needed.
- 
+
 Phase 2 has three primary objectives:
 1.	Refine and update risk model to include smaller geographic areas and new data.
 2.	Set up a method so that the model can easily be refreshed by the Red Cross team when new home fire datasets are available.
+
+## Documentation
+
+See project [documentation](https://red-cross-fire-risk-map-v2.readthedocs.io/en/latest/)
+for an API reference.
 
 ## Quickstart Guide
 Here is the general overview of the steps you'll need to perform to get started on our project. For a more details on any of the steps read getting-started.md located in the Docs folder.  
@@ -24,9 +29,9 @@ Download anaconda ( https://anaconda.org/)
 
 go to command line ( or anaconda terminal) and navigate to this directory (usually documents/github/rcp2)
   ```
-  conda create -n RCP2 python=3 -c conda-forge
+  conda env create -f environment.yml 
   conda activate RCP2
-  conda install --file requirements.txt
+  jupyter lab
   ```
   This will create your environment and activate and you'll be ready to go. 
 
@@ -90,14 +95,11 @@ Project Organization
     │
     ├── models             <- Trained and serialized models, model predictions, or model summaries
     │
-    ├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
+    ├── notebooks          <- Jupyter notebooks in progress. Naming convention is a number (for ordering),
     │                         the creator's initials, and a short `-` delimited description, e.g.
     │                         `1.0-jqp-initial-data-exploration`.
     │
-    ├── references         <- Data dictionaries, manuals, and all other explanatory materials (moved to google drive in Master                                                                                                project data).
-    │
-    ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-    │   └── figures        <- Generated graphics and figures to be used in reporting
+    ├── references         <- Data dictionaries, manuals, and all other explanatory materials (moved to google drive in Master)                                                                                                project data).
     │
     |.  ----(not currently implemented) ---- 
     |          Future roadmap

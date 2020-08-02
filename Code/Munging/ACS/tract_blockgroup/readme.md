@@ -3,7 +3,7 @@
 ## Introduction
 This folder contains two scripts: one that downloads raw ACS data, and<br>
 one that builds standardized features from that raw data.  The code has been <br>
-tested on ACS 5-year estimates from 2014 through 2016.
+tested on ACS 5-year estimates in 2014, 2015, 2016, 2018.
 
 ## Setup
 * Make sure the necessary Python packages are installed using <br>
@@ -12,8 +12,7 @@ tested on ACS 5-year estimates from 2014 through 2016.
 ## Sample Workflow
 ```
 # download data
-python prep_acs_tract_block.py 2016 Alabama --check_types
-python prep_acs_tract_block.py 2016 Alaska Arkansas  --template_folder 'templates_2016/'
+python prep_acs_tract_block.py 2016 all --all
 
 # build features
 python build_acs_features.py 2016 acs_2016_munging.txt
@@ -35,20 +34,26 @@ The associated templates are pulled from <br>
 https://www2.census.gov/programs-surveys/acs/summary_file/2016/data/2016_5yr_Summary_FileTemplates.zip
 
 ### Usage
-You should only need to download the templates, and check the types, once.
+Use `python prep_acs_tract_block.py {year} all --all` with the appropriate year<br>
+Example: `python prep_acs_tract_block.py 2016 all --all`
+
+If you want to run select states only, use:<br>
 
 For the first state:<br>
-`python prep_acs_tract_block.py Alabama --check_types` <br>
+`python prep_acs_tract_block.py {year} {state} --check_types` <br>
+Example: `python prep_acs_tract_block.py 2016 Wyoming --check_types` <br>
 This will output col_lookup.csv in the same folder as the data, that is <br>
-ingested by future calls to the script without the `--check_types` option.
+ingested by future calls to the script.
 
 For subsequent states:<br>
-`python prep_acs_tract_block.py Alaska Arkansas --template_folder 'templates_{year}/'`
+`python prep_acs_tract_block.py {year} {state1} {state2} --template_folder 'templates_{year}/'`<br>
+Example: `python prep_acs_tract_block.py 2016 Alaska RhodeIsland --template_folder 'templates_2016/'`
 
 ### Full Specification
 ```
-usage: prep_acs_tract_block.py [-h] [-tf TEMPLATE_FOLDER] [-sp STATE_PATH]
-                               [-ct] [-mv MAX_VARS] [-op OUTPUT_PATH]
+usage: prep_acs_tract_block.py [-h] [-a] [-tf TEMPLATE_FOLDER]
+                               [-sp STATE_PATH] [-ct] [-mv MAX_VARS]
+                               [-op OUTPUT_PATH]
                                year state [state ...]
 
 Prep ACS data
@@ -59,6 +64,8 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  -a, --all             download all data for a given year. only max_vars and
+                        output_path parameters are applied
   -tf TEMPLATE_FOLDER, --template_folder TEMPLATE_FOLDER
                         template folder path. if None, will download to
                         templates/
@@ -94,7 +101,8 @@ Example transform files for 2014-2016 are included here as <br>
 `acs_{year}_munging.txt`.
 
 Then run:<br>
-`python build_acs_features.py year transform_file`
+`python build_acs_features.py {year} {transform_file}`<br>
+Example: `python build_acs_features.py 2016 acs_2016_munging.txt`
 
 ### Full Specification
 ```
