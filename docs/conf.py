@@ -30,6 +30,7 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.napoleon",
+    "sphinx.ext.todo",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -252,3 +253,7 @@ intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
     "pooch": ("https://www.fatiando.org/pooch/latest/", None),
 }
+
+# Control display of "todo" directives.
+todo_include_todos = True
+todo_link_only = True
