@@ -115,24 +115,50 @@ Fire Propensity Model
 
 .. todo::
 
-   Describe the fire propensity model.
+  - Objective: Predict which Census Geographies will be in >90th percentile of total # of home fires the following year
+  - Inputs: NFIRS (national fire incidents reporting) and ACS (census demographics)
+      1. 'NFIRS Fire Incident Data.csv' (2009-2016)
+        - Hundreds of thousands of records with each record representing a fire incident in a US location
+      2. 'ACS 5YR Block Group Data.csv' OR 'ACS 5YR Tract Data.csv' (2013-2017)
+        - Hundreds of thousands of records with each record representing the demographics of a census geoid
+      * New NFIRS & ACS data is released each year
+  - Data Transformation:
+      - NFIRS:
+          1. Aggregated individual fire incidents into tabular format (records # of fires in each year in each geoid)
+          2. Normalized number of fires by total population in the respective geoid
+      - ACS:
+          1. Removed non-numeric variables
+          2. Removed 9 variables that are highly correlated with other variables in the dataset
+  - Outputs: Label predictions (0: not Top 10%, 1: Top 10%) & prediction probabilities for each census geography
+      1. 'PropensityBlockModel_2014_2016.csv' - provides predictions for years 2014-2016, but can be updated each year
+  - Model: Balanced Random forest Model using Python imb-learn package
+      - Script: 'NFIRS_Block_level.ipynb'
+      - Training Method: leverage all available data prior to target prediction year
+          - Training Method Example: to predict 2016 top 10%, train on NFIRS 2009-2015 & ACS 2013-2015
+          - Each record represents the feature values for a single geoid
+      - Features: the below features were selected from a larger group of ~100 b/c model importance score is > 0.01:
+          1. Sum of fires over selected years in the given geoid
+          2. Mean number of fires over selected years in the given geoid
+          3. Max number of fires over selected years in the given geoid
+          4. % of houses in geoid built before 1939
+          5. % of houses in geoid that are occupied
+          6. % of houses in geoid whose heating source is kerosene
+          7. % of houses in geoid with just a single occupant
+          8. % of houses in geoid inhabited by married couple
+          9. % of people in geoid with a bachelors degree
+          10. % of people in geoid that have worked within the past year
+          11. % of people in geoid that are black
+          12. % of houses in geoid occupied by the owner
+          13. % of people in geoid that have attended college but not graduated
+          14. % of houses in geoid with value between $175-200K
+          15. % of houses in geoid with value between $200-250K
+          16. % of houses in geoid with a home equity loan
+      - Preliminary Results:
+        - 65-75% weighted Avg Recall at the Census block level
+        - 75-85% Recall at the Census tract level
 
-   - Describe the general purpose.
-   - Describe the input data and any transformations.
-   - Describe the outcome variable.
-   - Describe the features.
-   - Describe the modeling approach.
-   - Link to any relevant code.
 
-.. From slides:
 
-  - Objective: Predict which Census Geographies will be in >90th percentile of total number of home fires the following year
-  - Inputs: NFIRS (fire incidence) and ACS (demographics)
-  - Model: Balanced Random forest Model
-  - Python: imb-learn
-  - Preliminary Results:
-  - 75-80% weighted Avg Recall at the Census block level
-  - 85-90% Recall at the Census tract level
 
 Smoke Alarm Presence Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
