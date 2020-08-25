@@ -163,25 +163,42 @@ Fire Propensity Model
 Smoke Alarm Presence Model
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. todo::
+The smoke alarm presence model quantifies the need for Red Cross smoke detector
+installation efforts. When the Red Cross visits households to check and install
+smoke detectors, they record the number and condition of smoke detectors in each
+household prior to providing services. This model uses Red Cross visits as
+convenience samples to estimate smoke detector prevalence in block groups.
 
-   Describe the smoke alarm presence model.
+See ``Code/Models/Smoke_Alarm_Model.ipynb`` for the implementation.
 
-   - Describe the general purpose.
-   - Describe the input data and any transformations.
-   - Describe the outcome variable.
-   - Describe the features.
-   - Describe the modeling approach.
-   - Link to any relevant code.
+The model predicts the block-group level probability of finding at least one
+working smoke detector in a given household. It estimates this probability from
+the sample proportion of households recording at least one working smoke
+detector prior to Red Cross intervention.
 
-.. From slides:
+The input data include about 500 thousand household visits over five years.
+The Red Cross anonymizes the data and geocodes each household to a census block
+group before providing the data to this project; we take these steps as given.
+We process the raw data in the following steps:
 
-  - Objective: Predict what percentage of households within census geographies have a working smoke detector
-  - Inputs: RC Home Visits (Smoke Alarm Presence)
-  - 1 million houses visited
-  - Model: Hierarchical statistical model
-  - smoke detector presence at time of visit
-  - mean + standard error at first geography with > 30 records
+1. Drop households that are missing smoke detector data.
+2. Classify each household (has a smoke detector or not).
+3. Aggregate household statuses into block group averages.
+
+Our goal is to make estimates that are both stable and granular. For more stable
+estimates, we require block group averages to derive from at least 30
+observations. If a block group does not have enough observations, then we base
+the block group estimate on progressively larger geographies until it is based
+on at least 30 observations. The geographic units are (in order):
+
+1. Census block group
+2. Census tract
+3. County
+4. State
+
+As the Red Cross makes more visits, this model will incorporate additional
+household data to refine smoke detector probability estimates.
+
 
 Combined Model
 ~~~~~~~~~~~~~~
