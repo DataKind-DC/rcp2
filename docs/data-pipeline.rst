@@ -16,7 +16,7 @@ At a high level, this project uses several data sources to predict the
 probability and severity of fires in the US at the census block level, as well
 as the prevalence of smoke detectors.
 
-.. image:: images/pipline.png
+.. image:: images/pipeline.png
    :alt: Data pipeline diagram.
 
 
