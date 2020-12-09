@@ -56,8 +56,10 @@ def CleanACS(ACS):
     ACS.drop(ACS.loc[:, 'educ_nursery_4th':'educ_some_col_no_grad'], inplace = True, axis = 1)
 
     # house age adjustment 
-    ACS['house_yr_pct_before_1960'] =ACS.loc[:,'house_yr_pct_1960_1969':'house_yr_pct_earlier_1939'].sum(axis =1 )
-    ACS.drop(ACS.loc[:, 'house_yr_pct_1960_1969':'house_yr_pct_earlier_1939'], inplace = True, axis = 1)
+    ACS['house_yr_pct_before_1960'] =ACS.loc[:,'house_yr_pct_1950_1959':'house_yr_pct_earlier_1939'].sum(axis =1 )
+    ACS['house_yr_pct_after_2000'] = ACS.loc[:, 'house_yr_pct_2014_plus':'house_yr_pct_2000_2009'].sum(axis = 1 )
+    ACS['house_yr_pct_1960_2000'] = ACS.loc[:, 'house_yr_pct_1990_1999':'house_yr_pct_1960_1969'].sum(axis = 1 )
+    ACS.drop(ACS.loc[:, 'house_yr_pct_2014_plus':'house_yr_pct_earlier_1939'], inplace = True, axis = 1)
     
     # housing Price adjustment
     ACS['house_val_less_50K']=ACS.loc[:,'house_val_less_10K':'house_val_40K_50K'].sum(axis =1 )
