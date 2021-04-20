@@ -4,7 +4,10 @@ The following top-level variables make it easier to reference specific
 directories in other scripts and notebooks:
 
 - :data:`src.utils.ROOT`: The project root (usually named ``rcp2/``).
-- :data:`src.utils.DATA`: The project data directory and subdirectories.
+- :data:`src.utils.DATA`: The project data directory and subdirectories
+
+- :GEOID:`src.utils.GEOID`: GEOIDS are the ID system for census geographies
+             stored as key value pairs of 'geoid_name': len(GEOID)
 
 .. note::
    The ``DATA`` variable assumes that you have downloaded and set up the data
@@ -36,4 +39,12 @@ DATA = {
     "shapefiles": ROOT / "Data" / "03_Shapefiles",
     "shapefiles-census": ROOT / "Data" / "03_Shapefiles" / "2010_Census_shapefiles",
     "shapefiles-svi": ROOT / "Data" / "03_Shapefiles" / "SVI2016_US_shapefiles",
+}
+
+
+GEOID = { 
+  'state': 2,
+  'county': 5,
+  'tract' : 11,
+  'block_group' : 12
 }
