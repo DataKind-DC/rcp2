@@ -12,7 +12,7 @@ It has been tested on ACS 5-year estimates in 2014, 2015, 2016, 2018.
 ## Sample Workflow
 ```
 # download data and build features
-python acs_blockgroup.py 2016 acs_2016_munging.txt all --all
+python acs_blockgroup.py 2016 acs_2016_munging.txt all --all -cf
 ```
 
 -----
@@ -50,12 +50,11 @@ one per row, under the variable_name header to select raw variables without
 any recoding.
 
 
-
 ### Full Specification
 ```
-usage: acs_blockgroup.py [-h] [-a] [-cs] [-op OUTPUT_PATH] year vars_file state [state ...]
+usage: acs_blockgroup.py [-h] [-a] [-op OUTPUT_PATH] [-cf] year vars_file state [state ...]
 
-Download ACS data and build features
+Prep ACS data
 
 positional arguments:
   year                  four digit year
@@ -64,8 +63,9 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
-  -a, --all             download data for all states for a given year. only output_path parameters are applied
-  -cs, --check_states   check if states have already been downloaded
+  -a, --all             download data for all states for a given year
   -op OUTPUT_PATH, --output_path OUTPUT_PATH
                         path to write files to
+  -cf, --combine_features
+                        create file of combined state data file
 ```

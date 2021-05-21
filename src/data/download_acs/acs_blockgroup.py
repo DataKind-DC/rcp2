@@ -7,30 +7,36 @@ import argparse
 import re
 import pathlib
 
-
-
 API_KEY = '62259668f45cf937bb592cd9236be97bc6bc5031'
 
 MAX_VARS = 50
 
-STATE_CODES = {'Alabama': '01', 'Alaska': '02', 'Arizona': '04', 
-               'Arkansas': '05', 'California': '06', 'Colorado': '08',
-               'Connecticut': '09', 'Delaware': '10', 
-               'District of Columbia': '11', 'Florida': '12', 'Georgia': '13',
-               'Hawaii': '15', 'Idaho': '16', 'Illinois': '17', 'Indiana': '18',
-               'Iowa': '19', 'Kansas': '20', 'Kentucky': '21', 
-               'Louisiana': '22', 'Maine': '23', 'Maryland': '24', 
-               'Massachusetts': '25', 'Michigan': '26', 'Minnesota': '27', 
-               'Mississippi': '28', 'Missouri': '29', 'Montana': '30', 
-               'Nebraska': '31', 'Nevada': '32', 'New Hampshire': '33', 
-               'New Jersey': '34', 'New Mexico': '35', 'New York': '36', 
-               'North Carolina': '37', 'North Dakota': '38', 'Ohio': '39', 
-               'Oklahoma': '40', 'Oregon': '41', 'Pennsylvania': '42', 
-               'Rhode Island': '44', 'South Carolina': '45', 
-               'South Dakota': '46', 'Tennessee': '47', 'Texas': '48', 
-               'Utah': '49', 'Vermont': '50', 'Virginia': '51', 
-               'Washington': '53', 'West Virginia': '54', 'Wisconsin': '55', 
-               'Wyoming': '56'}
+STATE_CODES = {'Alabama': ('AL', '01'), 'Alaska': ('AK', '02'),
+               'Arizona': ('AZ', '04'), 'Arkansas': ('AR', '05'),
+               'California': ('CA', '06'), 'Colorado': ('CO', '08'),
+               'Connecticut': ('CT', '09'), 'Delaware': ('DE', '10'),
+               'District of Columbia': ('DC', '11'), 'Florida': ('FL', '12'),
+               'Georgia': ('GA', '13'), 'Hawaii': ('HI', '15'), 
+               'Idaho': ('ID', '16'), 'Illinois': ('IL', '17'), 
+               'Indiana': ('IN', '18'), 'Iowa': ('IA', '19'), 
+               'Kansas': ('KS', '20'), 'Kentucky': ('KY', '21'), 
+               'Louisiana': ('LA', '22'), 'Maine': ('ME', '23'), 
+               'Maryland': ('MD', '24'), 'Massachusetts': ('MA', '25'),
+               'Michigan': ('MI', '26'), 'Minnesota': ('MN', '27'), 
+               'Mississippi': ('MS', '28'), 'Missouri': ('MO', '29'), 
+               'Montana': ('MT', '30'), 'Nebraska': ('NE', '31'), 
+               'Nevada': ('NV', '32'), 'New Hampshire': ('NH', '33'), 
+               'New Jersey': ('NJ', '34'), 'New Mexico': ('NM', '35'), 
+               'New York': ('NY', '36'), 'North Carolina': ('NC', '37'), 
+               'North Dakota': ('ND', '38'), 'Ohio': ('OH', '39'), 
+               'Oklahoma': ('OK', '40'), 'Oregon': ('OR', '41'), 
+               'Pennsylvania': ('PA', '42'), 'Rhode Island': ('RI', '44'), 
+               'South Carolina': ('SC', '45'), 'South Dakota': ('SD', '46'), 
+               'Tennessee': ('TN', '47'), 'Texas': ('TX', '48'), 
+               'Utah': ('UT', '49'), 'Vermont': ('VT', '50'), 
+               'Virginia': ('VA', '51'), 'Washington': ('WA', '53'), 
+               'West Virginia': ('WV', '54'), 'Wisconsin': ('WI', '55'),
+               'Wyoming': ('WY', '56')}
 
 
 def extract_vars(vars_file):
@@ -66,7 +72,7 @@ def extract_vars(vars_file):
     try:
         f = open(vars_file, 'r')
         acs_vars = f.readlines()
-        acs_vars = [x.strip() for x in acs_vars if x.strip()]
+        acs_vars = [vars.strip() for vars in acs_vars if vars.strip()]
     except:
         logging.error('unable to read vars file {0}'.format(vars_file))
         return
@@ -229,9 +235,11 @@ def get_vars_data(vars, state_code, year):
             break
         except:
             continue
+    
+    if vars_data is None:
         logging.error('unable to download vars')
         return
-
+    
     # remove header 
     vars_data = vars_data[1:]
 
@@ -246,7 +254,36 @@ def get_vars_data(vars, state_code, year):
 
     return vars_data
 
-def acs_full(year, vars_file, check_states, output_path):
+def combine_features(state_names, year, output_path):
+    """ combine individual csv state files into one
+
+    :param state_names: list of state names
+    :param year: string four-digit year
+    :param output_path: string path to write raw files to
+    
+    :return: None
+    """
+
+    logging.info('Combining all states into one file')
+    if state_names[0] == 'all':
+        state_names = sorted(STATE_CODES)
+    
+    output_path = output_path.format(year=year)
+    output_file = output_path + 'acs_{y}_data.csv'.format(y=year)
+    
+    if os.path.isfile(output_file):
+        os.remove(output_file)
+    
+    df = pd.DataFrame()
+    for state in sorted(state_names):
+        logging.info('Adding {state}'.format(state=state))
+
+        temp = pd.read_csv(output_path + state + '.csv')
+        with open(output_file, mode = 'a') as f:
+            temp.to_csv(f, header=f.tell()==0,index = False)
+    return
+
+def acs_full(year, vars_file, output_path):
     """ download all ACS data needed for model for a given year 
 
     :param year: string four-digit year
@@ -258,25 +295,25 @@ def acs_full(year, vars_file, check_states, output_path):
     :return: None
     """
 
-    STATE_NAMES = sorted(STATE_CODES)
+    state_names = sorted(STATE_CODES)
     output_path = output_path.format(year=year)
 
     # check to see which states have already been downloaded    
 
     if not pathlib.Path(output_path).exists():
         os.mkdir(output_path)
-    else:
-        completed_states = os.listdir(path=output_path)
-        completed_states = [state[:-4] for state in completed_states]
-        STATE_NAMES = sorted(list(set(STATE_NAMES) - set(completed_states)))
 
-    for state in STATE_NAMES:
-        acs_main(state, year, vars_file, check_states, output_path)    
-   
+    completed_states = os.listdir(path=output_path)
+    completed_states = [state[:-4] for state in completed_states]
+    states = sorted(list(set(state_names) - set(completed_states)))
+
+
+    for state in states:
+        acs_main(state, year, vars_file, output_path)
     return
 
 
-def acs_main(state, year, vars_file, check_states, output_path):
+def acs_main(state, year, vars_file, output_path):
     """ download ACS data needed for model and do transformations 
 
     :param state: string state name
@@ -285,19 +322,15 @@ def acs_main(state, year, vars_file, check_states, output_path):
         should have column header: variable_name
         if doing transformations, headers should be (tab delimited): 
         variable_name, operator, argument1, argument2
+    :param output_path: string path to write raw files to
     
     :returns: None
     """
 
-    logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO)
-    num_logger = logging.getLogger('numexpr')
-    num_logger.setLevel(logging.ERROR)
-
     logging.info('downloading {st}'.format(st=state))
 
     state_data = pd.DataFrame()
-    state_code = STATE_CODES[state]
+    state_code = STATE_CODES[state][1]
 
     output_path = output_path.format(year=year)
     file_name = state + '.csv'
@@ -331,7 +364,10 @@ def acs_main(state, year, vars_file, check_states, output_path):
         else:
             state_data = pd.merge(state_data, vars_data, on='geoid')
     
+    # make lookup easier
     state_data['geoid'] = state_data['geoid'].apply(lambda g : '#_' + g)
+    state_data.insert(0, 'state', STATE_CODES[state][0])
+    
     # transforms
     transforms = pd.read_csv(vars_file, sep='\t')
     state_data = do_transformations(state_data, transforms)
@@ -349,22 +385,28 @@ def acs_cmd():
     parser.add_argument('state', type=str, help='state full name', nargs='+')
 
     parser.add_argument('-a', '--all', default=False, action='store_true',
-        help='download data for all states for a given year.  '
-             'only output_path parameters are applied')
-    parser.add_argument('-cs', '--check_states', default=False, 
-        action='store_true', help='check if states have already been downloaded')
+        help='download data for all states for a given year')
     parser.add_argument('-op', '--output_path', default='../../../Data/acs_{year}/',
         help='path to write files to')
+    parser.add_argument('-cf', '--combine_features', default=False,
+    action='store_true', help='create file of combined state data file')
     
     args = parser.parse_args()
 
+    logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
+                    datefmt='%Y-%m-%d %H:%M:%S', level=logging.INFO)
+    num_logger = logging.getLogger('numexpr')
+    num_logger.setLevel(logging.ERROR)
+
     if args.all:
-        acs_full(args.year, args.vars_file, check_states=args.check_states,
-            output_path=args.output_path)
+        acs_full(args.year, args.vars_file, output_path=args.output_path)
     else:
         for state in args.state:
-            acs_main(state, args.year, args.vars_file, args.check_states, 
-            args.output_path)
+            acs_main(state, args.year, args.vars_file, args.output_path)
+    
+    if args.combine_features:
+
+        combine_features(args.state, args.year, args.output_path)
 
 if __name__ == '__main__':
     acs_cmd()
