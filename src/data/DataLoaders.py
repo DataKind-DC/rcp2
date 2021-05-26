@@ -122,3 +122,58 @@ class ACSData(genericDataSet):
 
 
 
+class NFIRSdata(genericDataSet):
+    
+    def __init__(self,level,tot_pop):
+        self.file_name = 'NFIRS Fire Incident Data.csv'
+        self.tot_pop = tot_pop
+        super().__init__(level)
+
+
+    def cleanData(self,nfirs):
+        #NFIRS Munging
+
+        # Ensure correct calculation of tot_loss column 
+        nfirs['tot_loss'] = nfirs['prop_loss'] + nfirs['cont_loss']
+
+        # Create mask for new severe fire variable
+        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= 10000)
+
+        # By default assigns values of severe fire column as not severe
+        nfirs['severe_fire'] = 'not_sev_fire'
+
+        # Applies filter to severe fire column to label the severe fire instances correctly
+        nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
+
+        # Create new NFIRS variables based on specified thresholds of existing variables in dataframe
+        nfirs['had_inj'] = np.where(nfirs['oth_inj']>0,'had_inj','no_inj')
+        nfirs['had_death'] = np.where(nfirs['oth_death']>0,'had_death','no_death')
+        nfirs['10k_loss'] = np.where(nfirs['tot_loss']>=10000,'had_10k_loss','no_10k_loss')
+
+        # Extract just the numeric portion of the geoid
+        nfirs['geoid'] =  nfirs['geoid'].str.strip('#_')
+
+        # Add a year column to be used to groupby in addition to geoid
+        nfirs['year'] = nfirs['inc_date'].dt.year.astype('str')
+        nfirs.set_index('geoid',inplace = True)
+
+
+        # package 
+        self.data = nfirs
+
+        # munge to appropriate level 
+
+        if  self.level =='block_group':
+            #ACS data already at block_group level
+            self.tot_pop = tot_pop
+        else:
+            self.MungeData(tot_pop,self.level)
+
+
+    def mungeData(self,tot_pop,level):
+        super().mungeData(self,tot_pop,level)
+
+        
+
+
+
