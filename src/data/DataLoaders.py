@@ -4,10 +4,10 @@ import pandas as pd
 from src import utils
 
 class genericDataSet:
-    def  __init__(self, level = 'block'):
+    def  __init__(self, level = 'block_group'):
 
-        #self.file_name= [] provide in subclasses
-        self.tot_pop = [];   
+        #self.file_name= [] provide in subclasses  
+        #self.tot_pop = []
         self.level = level
         self.LoadAndClean()
 
@@ -127,11 +127,42 @@ class NFIRSdata(genericDataSet):
     def __init__(self,level,tot_pop):
         self.file_name = 'NFIRS Fire Incident Data.csv'
         self.tot_pop = tot_pop
-        super().__init__(level)
+        self.level = level
+        self.LoadAndClean()
 
 
-    def cleanData(self,nfirs):
+
+
+    def LoadAndClean(self):
+        cols_to_use = ['state','fdid','inc_date','oth_inj','oth_death','prop_loss',
+               'cont_loss','tot_loss','geoid']
+
+        # Specify particular data type for geoid column
+        col_dtypes = {'geoid':str}
+
+        # utils.DATA['master']  / self.file_name
+
+        #Read in NFIRS dataframe
+        Data_path =  utils.DATA['master']  / self.file_name
+        
+        Data =  pd.read_csv(Data_path,
+                    dtype = col_dtypes,
+                    usecols = cols_to_use,
+                    encoding='latin-1')
+
+        self.CleanData(Data)
+
+
+             
+
+
+    def CleanData(self,nfirs):
         #NFIRS Munging
+
+        #Convert inc_date column values to python datetime type
+        nfirs['inc_date'] = pd.to_datetime(nfirs['inc_date'], infer_datetime_format=True)
+
+
 
         # Ensure correct calculation of tot_loss column 
         nfirs['tot_loss'] = nfirs['prop_loss'] + nfirs['cont_loss']
@@ -165,9 +196,9 @@ class NFIRSdata(genericDataSet):
 
         if  self.level =='block_group':
             #ACS data already at block_group level
-            self.tot_pop = tot_pop
+            pass
         else:
-            self.MungeData(tot_pop,self.level)
+            self.MungeData(self.tot_pop,self.level)
 
 
     def mungeData(self,tot_pop,level):
