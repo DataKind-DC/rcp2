@@ -2,6 +2,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from src import utils
+import sys
+# looks for acs 2016 data in Data/acs_2016/acs_2016_features.csv
+# looks for nfirs data in Data/NFIRS Fire Incident Data.csv
+# pass in desired geolevel as argument
 
 class genericDataSet:
     def  __init__(self, level = 'block_group'):
@@ -12,10 +16,10 @@ class genericDataSet:
         self.LoadAndClean()
 
     def LoadAndClean(self):
-        
-        Data_path =  utils.DATA['master']  / self.file_name
+        Data_path = self.file_name
         Data =  pd.read_csv(Data_path, dtype = {'GEOID':'object'},\
         index_col = 1)
+        print(Data)
         self.CleanData(Data) 
 
 
@@ -42,7 +46,7 @@ class genericDataSet:
     
 class ACSData(genericDataSet):
     def __init__(self,level):
-        self.file_name = 'ACS 5YR Block Group Data.csv'
+        self.file_name = '../../Data/acs_2016/acs_2016_features.csv'
         super().__init__(level)
 
 
@@ -55,7 +59,7 @@ class ACSData(genericDataSet):
         #            #Note: this can function can only aggregate data    
 
         # Ensures GEOID variable is in the correct format and sets it as the dataframe index
-        ACS['GEOID'] = ACS['GEOID'].str[2:]
+        ACS['GEOID'] = ACS['geoid'].str[2:]
         
         ACS.set_index(['GEOID'],inplace = True)
 
@@ -125,7 +129,7 @@ class ACSData(genericDataSet):
 class NFIRSdata(genericDataSet):
     
     def __init__(self,level,tot_pop):
-        self.file_name = 'NFIRS Fire Incident Data.csv'
+        self.file_name = '../../Data/NFIRS Fire Incident Data.csv'
         self.tot_pop = tot_pop
         self.level = level
         self.LoadAndClean()
@@ -143,7 +147,7 @@ class NFIRSdata(genericDataSet):
         # utils.DATA['master']  / self.file_name
 
         #Read in NFIRS dataframe
-        Data_path =  utils.DATA['master']  / self.file_name
+        Data_path =  self.file_name
         
         Data =  pd.read_csv(Data_path,
                     dtype = col_dtypes,
@@ -193,18 +197,54 @@ class NFIRSdata(genericDataSet):
         self.data = nfirs
 
         # munge to appropriate level 
+        self.mungeData(self.tot_pop, self.level, self.data)
+        # if  self.level =='block_group':
+        #     #ACS data already at block_group level
+        #     pass
+        # else:
+        #     self.MungeData(self.tot_pop,self.level)
 
-        if  self.level =='block_group':
-            #ACS data already at block_group level
-            pass
-        else:
-            self.MungeData(self.tot_pop,self.level)
+
+    def mungeData(self,tot_pop,level, nfirs):
+
+        GEOID = { 
+            'state': 2,
+            'county': 5,
+            'tract' : 11,
+            'block_group' : 12
+            }
+
+        l = GEOID[level]
 
 
-    def mungeData(self,tot_pop,level):
-        super().mungeData(self,tot_pop,level)
-
+        fires = pd.crosstab(nfirs.index, nfirs['year'])
         
+        block_fires = fires.copy()
+        fires.index = [f[0:l] for f in fires.index]
+        fires.index.name = 'geoid'
+        grouped_fires = fires.groupby(by='geoid').sum()
+
+        block_tot_pop = tot_pop.copy()
+        tot_pop.index = [p[0:l] for p in tot_pop.index]
+        tot_pop.index.name = 'geoid'
+        grouped_tot_pop = tot_pop.groupby(by='geoid').sum()
+
+        final = grouped_fires.divide(grouped_tot_pop['tot_population'], axis='index')
+
+        top10 = final > final.quantile(.9)
+
+        self.final = final
+        self.top10 = top10
 
 
+if __name__ == "__main__":
 
+    level = str(sys.argv[1])
+    ACSLoader =  ACSData('block_group')
+    ACS = ACSLoader.data
+
+
+    tot_pop = ACSLoader.tot_pop
+    NFIRSDataLoader = NFIRSdata(level,tot_pop)
+    fires = NFIRSDataLoader.final
+    top10 = NFIRSDataLoader.top10
