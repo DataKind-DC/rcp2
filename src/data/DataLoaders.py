@@ -19,7 +19,7 @@ class genericDataSet:
         Data_path = self.file_name
         Data =  pd.read_csv(Data_path, dtype = {'GEOID':'object'},\
         index_col = 1)
-        print(Data)
+        #print(Data)
         self.CleanData(Data) 
 
 
@@ -29,8 +29,8 @@ class genericDataSet:
         Data = self.data 
         Data = Data.multiply(tot_pop['tot_population'],axis= 'index')
      
-        Data.index , tot_pop.index  = Data.index.str[1:utils.GEOID[level]], \
-                                  tot_pop.index.str[1:utils.GEOID[level]]
+        Data.index , tot_pop.index  = Data.index.str[0:utils.GEOID[level]], \
+                                  tot_pop.index.str[0:utils.GEOID[level]]
 
         Data, tot_pop = Data.groupby(Data.index).sum(), \
                    tot_pop.groupby(tot_pop.index).sum()
@@ -45,8 +45,8 @@ class genericDataSet:
 
     
 class ACSData(genericDataSet):
-    def __init__(self,level):
-        self.file_name = '../../Data/acs_2016/acs_2016_features.csv'
+    def __init__(self,year,level):
+        self.file_name = utils.DATA['acs'] / "acs_{}_features.csv".format(year)
         super().__init__(level)
 
 
@@ -59,10 +59,14 @@ class ACSData(genericDataSet):
         #            #Note: this can function can only aggregate data    
 
         # Ensures GEOID variable is in the correct format and sets it as the dataframe index
+        ACS.reset_index(inplace = True)
         ACS['GEOID'] = ACS['geoid'].str[2:]
         
         ACS.set_index(['GEOID'],inplace = True)
 
+        ACS.drop('geoid','columns',inplace =True)
+
+        
         # Removes extraneous features (i.e. non-numeric) in the dataframe
         if 'Unnamed: 0' in ACS.columns:
             ACS.drop('Unnamed: 0','columns',inplace= True)
@@ -73,6 +77,7 @@ class ACSData(genericDataSet):
         if 'inc_pcincome' in ACS.columns:
             ACS.drop('inc_pcincome','columns',inplace= True)
         
+
         
         tot_pop = ACS[['tot_population']].groupby('GEOID').sum()
         # Drop all total count columns in ACS and keeps all percentage columns
@@ -126,12 +131,13 @@ class ACSData(genericDataSet):
 
 
 
-class NFIRSdata(genericDataSet):
+class NFIRSData(genericDataSet):
     
-    def __init__(self,level,tot_pop):
-        self.file_name = '../../Data/NFIRS Fire Incident Data.csv'
+    def __init__(self,level,tot_pop,sev=False):
+        self.file_name = utils.DATA['master'] /'NFIRS Fire Incident Data.csv'
         self.tot_pop = tot_pop
         self.level = level
+        self.severeFiresOnly = sev
         self.LoadAndClean()
 
 
@@ -193,58 +199,55 @@ class NFIRSdata(genericDataSet):
         nfirs.set_index('geoid',inplace = True)
 
 
-        # package 
+        # package  
         self.data = nfirs
 
         # munge to appropriate level 
-        self.mungeData(self.tot_pop, self.level, self.data)
-        # if  self.level =='block_group':
-        #     #ACS data already at block_group level
-        #     pass
-        # else:
-        #     self.MungeData(self.tot_pop,self.level)
+        self.MungeData(self.tot_pop,self.level)
 
 
-    def mungeData(self,tot_pop,level, nfirs):
+    
 
-        GEOID = { 
-            'state': 2,
-            'county': 5,
-            'tract' : 11,
-            'block_group' : 12
-            }
+    def MungeData(self,tot_pop,level):
 
-        l = GEOID[level]
+        nfirs = self.data
+        L = utils.GEOID[level]
+        # shorten geoid to desired geography
+        nfirs.index = nfirs.index.str[0:L]
+
+       # subset to severe fires if requested 
+        if self.severeFiresOnly:
+            nfirs = nfirs[nfirs['severe_fires'] == 'sev_fire' ]
 
 
+        # create a list of number of fires per year for each geography
         fires = pd.crosstab(nfirs.index, nfirs['year'])
         
-        block_fires = fires.copy()
-        fires.index = [f[0:l] for f in fires.index]
-        fires.index.name = 'geoid'
-        grouped_fires = fires.groupby(by='geoid').sum()
+        # Grab total population values pulled from ACS dataframe and assign to each census block in NFIRS dataframe
+        fires = fires.merge(tot_pop, how = 'left', left_index = True, right_index = True)
+        fires.index = fires.index.rename('geoid')
 
-        block_tot_pop = tot_pop.copy()
-        tot_pop.index = [p[0:l] for p in tot_pop.index]
-        tot_pop.index.name = 'geoid'
-        grouped_tot_pop = tot_pop.groupby(by='geoid').sum()
 
-        final = grouped_fires.divide(grouped_tot_pop['tot_population'], axis='index')
+        # Remove resulting infinity values and zeros following merge 
+        # note: We keep resulting NA's as NA's to show gaps in data collection 
+        # use NA tolerant algo or change or add line to drop all rows with NAs
+        fires.replace([np.inf, -np.inf,0], np.nan,inplace = True)
 
-        top10 = final > final.quantile(.9)
+        # drop rows with low population count
+        fires = fires[fires['tot_population'] >= 50 ] 
 
-        self.final = final
+        # population adjustment to fires per_n_people 
+        per_n_people = 1000
+        min_year,max_year = nfirs['year'].min(), nfirs['year'].max()
+        fires.loc[:,min_year:max_year] = fires.loc[:,min_year:max_year].div(fires['tot_population'], axis = 'index') * per_n_people
+
+        # remove population
+        fires.drop('tot_population',axis = 1, inplace = True)
+
+        # find top decile in terms of number of adjusted fires each year
+        top10 = fires > fires.quantile(.9)
+
+        self.fires = fires
         self.top10 = top10
 
 
-if __name__ == "__main__":
-
-    level = str(sys.argv[1])
-    ACSLoader =  ACSData('block_group')
-    ACS = ACSLoader.data
-
-
-    tot_pop = ACSLoader.tot_pop
-    NFIRSDataLoader = NFIRSdata(level,tot_pop)
-    fires = NFIRSDataLoader.final
-    top10 = NFIRSDataLoader.top10
