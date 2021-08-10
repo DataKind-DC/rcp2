@@ -1,7 +1,9 @@
 # Specific Folders
 /Data/raw
 /Data/interim
+/Data/ACS_Extraction
 /Data/Master Project Data
+/src/data/acs
 
 #notebook checkpoints
 .ipynb_checkpoints*

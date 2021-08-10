@@ -221,6 +221,7 @@ dependencies:
   - wrapt
   - wurlitzer
   - xerces-c
+  - xlrd
   - xz
   - yaml
   - yapf
