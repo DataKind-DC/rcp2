@@ -281,6 +281,8 @@ def combine_features(state_names, year, output_path):
         temp = pd.read_csv(output_path + state + '.csv')
         with open(output_file, mode = 'a') as f:
             temp.to_csv(f, header=f.tell()==0,index = False)
+        os.remove(output_path + state + '.csv')
+        
     return
 
 def acs_full(year, vars_file, output_path):
@@ -386,11 +388,11 @@ def acs_cmd():
 
     parser.add_argument('-a', '--all', default=False, action='store_true',
         help='download data for all states for a given year')
-    parser.add_argument('-op', '--output_path', default='../../../Data/acs_{year}/',
+    parser.add_argument('-op', '--output_path', default='../../../Data/ACS_Extraction/',
         help='path to write files to')
     parser.add_argument('-cf', '--combine_features', default=False,
-    action='store_true', help='create file of combined state data file')
-    
+    action='store_true', help='create file of combined state data file then delete state files')
+
     args = parser.parse_args()
 
     logging.basicConfig(format='%(asctime)s - %(funcName)s - %(message)s',
