@@ -67,5 +67,5 @@ optional arguments:
   -op OUTPUT_PATH, --output_path OUTPUT_PATH
                         path to write files to
   -cf, --combine_features
-                        create file of combined state data file
+                        create file of combined state data file then delete state files
 ```
