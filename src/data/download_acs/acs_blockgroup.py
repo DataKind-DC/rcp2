@@ -373,6 +373,8 @@ def acs_main(state, year, vars_file, output_path):
     # transforms
     transforms = pd.read_csv(vars_file, sep='\t')
     state_data = do_transformations(state_data, transforms)
+    # The following line removes the raw data leaving only the transformations
+    state_data = state_data.loc[:,~state_data.columns.str.startswith('B')]
     state_data.to_csv(output_file, index=False)
     
     logging.info('{st} data downloaded'.format(st=state))
