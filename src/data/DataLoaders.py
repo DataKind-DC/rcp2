@@ -251,3 +251,31 @@ class NFIRSData(genericDataSet):
         self.top10 = top10
 
 
+
+class ARCPreparednessData(genericDataSet):
+    def __init__(self):
+        self.file_name = utils.DATA['master'] /'ARC Preparedness Data.csv'
+        super().__init__()
+
+    def CleanData(self,ARC):
+        self.data  = self.StandardizeColumnNames(ARC)
+
+    
+    def StandardizeColumnNames(self,df):
+        """
+        Standardizes column names
+        """
+        df.columns = map(str.lower, df.columns)
+        df.columns = df.columns.str.replace(', ', '_')
+        df.columns = df.columns.str.replace('-', '_')
+        df.columns = df.columns.str.replace('/', '_')
+        df.columns = df.columns.str.replace('(', '_')
+        df.columns = df.columns.str.replace(')', '_')
+        df.columns = df.columns.str.replace(' ', '_')
+        #print(df.columns)
+        df.dropna(inplace = True)
+        # trim geoid leading saftey marks 
+        df['geoid'] = df['geoid'].str[2:]
+
+        return df
+
