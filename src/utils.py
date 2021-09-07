@@ -35,6 +35,7 @@ DATA = {
     "raw": ROOT / "Data" / "raw",
     "interim": ROOT / "Data" / 'interim',
     "master": ROOT / "Data" / "Master Project Data",
+    "model-outputs": ROOT / "Data" / "Model Outputs",
     "processed": ROOT / "Data" / "processed",
     "shapefiles": ROOT / "Data" / "03_Shapefiles",
     "shapefiles-census": ROOT / "Data" / "03_Shapefiles" / "2010_Census_shapefiles",
