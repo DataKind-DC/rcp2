@@ -52,6 +52,58 @@ class FireRiskModels():
 
     def predict(self):
         pass
+    
+    @staticmethod
+    def resample_df(X,y,upsample=True,seed = SEED):
+        from sklearn.utils import resample
+        # check which of our two classes is overly represented 
+        if np.mean(y) > .5:
+            major,minor = 1,0
+        else:
+            major,minor = 0, 1
+        
+        # Add Class feature to dataframe equal to our existing dependent variable
+        X['Class'] = y
+        
+        df_major = X[X.Class == major ]
+        df_minor = X[X.Class == minor ]
+        
+
+        if upsample:      
+        
+            df_minor_resampled = resample(df_minor,
+                                        replace = True,
+                                        n_samples = df_major.shape[0], 
+                                        random_state = seed)
+        
+        
+    
+            combined = pd.concat([df_major,df_minor_resampled])
+            
+            # Debug
+            #print('minor class {}, major class {}'.format(df_minor_resampled.shape[0],
+                                                        #df_major.shape[0]))
+        
+            
+        else: # downsample
+            
+            df_major_resampled = resample(df_major,
+                                        replace = False,
+                                        n_samples = df_minor.shape[0],
+                                        random_state = seed)
+            
+            
+            combined = pd.concat([df_major_resampled,df_minor])
+            
+            #print('minor class {}, major class {}'.format(df_minor.shape[0],
+                                                        #df_major_resampled.shape[0]))
+
+
+        
+        
+        y_out = combined['Class']
+        X_out = combined.drop('Class', axis =1)
+        return X_out , y_out
 
 
 
