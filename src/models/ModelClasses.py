@@ -35,6 +35,7 @@ class FireRiskModels():
 
         #self.file_name= [] provide in subclasses  
         #self.tot_pop = []
+        self.SEED = 0 
         self.level = Level
         self.type = Modeltype
         ACSdata = DataLoaders.ACSData(ACS_year, Level)
@@ -54,7 +55,7 @@ class FireRiskModels():
         pass
     
     @staticmethod
-    def resample_df(X,y,upsample=True,seed = SEED):
+    def resample_df(X,y,upsample=True,seed = self.SEED):
         from sklearn.utils import resample
         # check which of our two classes is overly represented 
         if np.mean(y) > .5:
