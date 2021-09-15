@@ -217,7 +217,7 @@ class NFIRSData(genericDataSet):
 
        # subset to severe fires if requested 
         if self.severeFiresOnly:
-            nfirs = nfirs[nfirs['severe_fires'] == 'sev_fire' ]
+            nfirs = nfirs[nfirs['severe_fire'] == 'sev_fire' ]
 
 
         # create a list of number of fires per year for each geography
