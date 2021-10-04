@@ -190,6 +190,7 @@ dependencies:
   - six
   - snowballstemmer
   - sortedcontainers
+  - shap
   - sphinx
   - sphinxcontrib-applehelp
   - sphinxcontrib-devhelp
@@ -221,6 +222,7 @@ dependencies:
   - wrapt
   - wurlitzer
   - xerces-c
+  - xgboost
   - xlrd
   - xz
   - yaml
