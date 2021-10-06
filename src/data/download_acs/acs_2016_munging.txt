@@ -117,7 +117,7 @@ total_housing_units	=	B25002_001
 house_pct_occupied	/	B25002_002	total_housing_units
 house_pct_vacant	/	B25002_003	total_housing_units
 house_pct_ownd_occupied	/	B25003_002	B25003_001
-house_pct_rent_occupied/	B25003_003	B25003_001
+house_pct_rent_occupied	/	B25003_003	B25003_001
 denom_house_room	=	B25017_001
 house_pct_1_room	/	B25017_002	denom_house_room
 house_pct_2_room	/	B25017_003	denom_house_room
@@ -189,3 +189,6 @@ house_w_2_mort	/	B25081_004	denom_house_mort
 house_w_home_equity_loan	/	B25081_005	denom_house_mort
 house_w_both_2_mort_and_loan	/	B25081_006	denom_house_mort
 house_no_mort	/	B25081_008	denom_house_mort
+disability_pct	+	B22010_003	B22010_006
+disability_pct	/	disability_pct	B22010_006
+snap_past_12_mo	/	B22010_002	B22010_001

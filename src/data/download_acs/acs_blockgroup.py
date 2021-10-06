@@ -390,7 +390,7 @@ def acs_cmd():
 
     parser.add_argument('-a', '--all', default=False, action='store_true',
         help='download data for all states for a given year')
-    parser.add_argument('-op', '--output_path', default='../../../Data/ACS_Extraction/',
+    parser.add_argument('-op', '--output_path', default='../../../Data/Model Outputs/ACS_Extraction/',
         help='path to write files to')
     parser.add_argument('-cf', '--combine_features', default=False,
     action='store_true', help='create file of combined state data file then delete state files')
