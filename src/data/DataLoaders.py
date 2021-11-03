@@ -115,6 +115,17 @@ class ACSData(genericDataSet):
         ACS['house_val_more_500K'] = ACS.loc[:,'house_val_500K_750K':'house_val_more_2M'].sum(axis = 1)
         ACS.drop(ACS.loc[:, 'house_val_less_10K':'house_val_more_2M'], inplace = True, axis = 1)
 
+
+        ACS['race_pct_black_or_amind'] = ACS.loc[:,'race_pct_black'] \
+                                       + ACS.loc[:,'race_pct_amind']
+
+        ACS['pct_alt_heat'] =  ACS.loc[:,'heat_pct_fueloil_kerosene']  \
+                       + ACS.loc[:,'heat_pct_coal']   \
+                       + ACS.loc[:,'heat_pct_wood']   \
+                       + ACS.loc[:,'heat_pct_bottled_tank_lpgas']
+
+
+
         # package 
         self.data = ACS
         
