@@ -6,7 +6,13 @@ from src.data import DataLoaders
 import numpy as np
 import pandas as pd
 
-import xgboost as xgb 
+from xgboost import XGBClassifier 
+
+from sklearn.metrics import classification_report
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import log_loss
+from sklearn.metrics import roc_auc_score
+
 
 import pickle
 
@@ -25,37 +31,171 @@ class ModelBaseClass:
 
 
 class FireRiskModels():
-    def  __init__(self,Modeltype ='severity',Level = 'block_group',ACS_year = '2016',
+    def  __init__(self,Modeltype ='propensity',ACS_year = '2016',
     mode = 'Production'):
 
-        try:
-            assert( mode in ['Production','Development'],'mode must be either Production or Development' )
-        except AssertionError as msg:
-            print(msg)
-
-        #self.file_name= [] provide in subclasses  
-        #self.tot_pop = []
         self.SEED = 0 
-        self.level = Level
         self.type = Modeltype
-        ACSdata = DataLoaders.ACSData(ACS_year, Level)
-        self.ACS = ACSdata.data
-        self.tot_pop = ACSdata.tot_pop 
-        nfirs = DataLoaders.NFIRSData(Level, self.ACSdata.tot_pop)
-        self.fires = nfirs.fires
-        self.top10 = nfirs.top10
         self.mode = mode
+        
 
-    def train(self):
-        pass
-    def test(self):
-        pass
+    def train(self,NFIRS,ACS,test_year='Current',n_years = 5):  
+    # Create framework to predict whether a given census block has a fire risk score in the 90th percentile 
+            # based on the specific number of previous years' data
+        
+        fires = NFIRS.fires
+        top10 = NFIRS.top10
+        years = top10.columns
+        Model_Input = None
+        Model_Predictions = None
+        Model_Prediction_Probs = None
+        Model_Actual = None
+        
+        # get year index 
+        if test_year == 'Current': 
+            test_year = fires.columns[-1]
+        
+        if test_year in fires.columns:
+            test_year_idx = fires.columns.get_loc(test_year)
+        else:
+            raise ValueError(f"{test_year} is not in NFIRS Data." 
+                             f" The most recent year in NFIRS is  {fires.columns[-1]}")
 
-    def predict(self):
+     
+                
+        # each model will train on `n_years` of data to predict the locations subsequent year with highest fire risk 
+        # model will train predicting 1 year and then test model accuracy by predicting the next year 
+        
+        # for example: 
+        
+        #  Train 
+        # predict 2016 using 2015-2012 data 
+        #
+        #
+        #  Test
+        # predict 2017 using 2016-2015 data  
+    
+        X_train, y_train,_ = self.munge_dataset(top10,fires,ACS.data,n_years,test_year_idx-1)
+        
+        X_test, y_test,Input = self.munge_dataset(top10,fires,ACS.data,n_years,test_year_idx)
+        
+        # Note: `Input` is used for manual data validation to ensure munging performed correctly 
+        
+
+        # Create 80/20 training/testing set split
+        #X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2 )
+
+        # Perform resampling if data classes are unbalanced
+        X_train, y_train = self.resample_df(X_train,y_train,upsample = False)
+
+
+
+        # Standardize features by removing the mean and scaling to unit variance
+
+        # scaler = preprocessing.StandardScaler().fit(X_train)
+        # X_train= scaler.transform(X_train)
+        # X_test = scaler.transform(X_test)
+
+
+        # Fit model to training set
+
+        print('Predicting {}:'.format(str(test_year)) )
+        
+        model = XGBClassifier( n_estimators=60,
+                    max_depth=10,
+                    random_state=0,
+                    max_features = None,
+                    n_jobs = -1, 
+                    seed = self.SEED )
+        
+        model = model.fit(X_train,y_train)
+      
+
+        # Calculate training set performance
+
+        #train_prediction_probs = model.predict_proba(X_train)
+        #train_predictions = model.predict(X_train)
+        #print (confusion_matrix(y_train, train_predictions))
+        #print (roc_auc_score(y_train, train_prediction_probs[:,1]))
+
+
+        # Calculate test set performance
+
+        test_prediction_probs = model.predict_proba(X_test)
+        test_predictions = model.predict(X_test)
+        #Model_Predictions = pd.Series(test_predictions)
+        #Model_Prediction_Probs = pd.Series(test_prediction_probs[:,[1]].flatten())
+        print (confusion_matrix(y_test, test_predictions))
+        print (roc_auc_score(y_test, test_prediction_probs[:,1]))
+        print (classification_report(y_test,test_predictions))
+        print (log_loss(y_test,test_predictions))
+
+
+        #Calculate feature importance for each model
+        importances = model.feature_importances_
+        indices = np.argsort(importances)[::-1]
+        print("Feature ranking:")
+        for f in range(len(X_test.columns)):
+            print("%d. %s (%f)" % (f + 1, X_test.columns[indices[f]], importances[indices[f]]))
+        
+        
+        self.model = model
+        self.Input = Input
+        
+    
+
+    def predict(self,NFIRS,ACS=[],predict_year='Current'):
         pass
     
     @staticmethod
-    def resample_df(X,y,upsample=True,seed = self.SEED):
+    def munge_dataset(top10,fires,ACS,n_years,test_year_idx):    
+        years = top10.columns
+        test_loc = test_year_idx
+        
+        # convert format for consistent output
+        X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
+        
+        #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
+
+        #sm = np.nansum(X, axis = 1 )
+        #mu = np.nanmean(X, axis = 1)
+        mx = np.nanmax(X, axis =1)
+        md = np.nanmedian(X,axis =1 )
+        X['Median'] = md  
+        #X['Sum']  = sm
+        #X['Mean'] = mu
+        X['Max']  = mx
+        
+        
+        
+    
+        
+        y  = top10.iloc[:,test_loc]
+        
+    
+
+
+
+        # merge in ACS Data into X unless NFIRS-Only model
+        out_fires = []
+        if not ACS.empty:
+            
+            # save copy for manual validation
+            out_fires = X.copy().merge(ACS, how ='left',left_index = True, right_index = True)
+            
+            X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
+            X = X.merge(ACS, how ='left',left_index = True, right_index = True)
+            
+            
+            
+            
+
+        
+        
+        return X,y,out_fires 
+
+    @staticmethod
+    def resample_df(X,y,upsample=True,seed = 0):
         from sklearn.utils import resample
         # check which of our two classes is overly represented 
         if np.mean(y) > .5:
