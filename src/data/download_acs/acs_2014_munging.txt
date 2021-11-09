@@ -190,5 +190,5 @@ house_w_home_equity_loan	/	B25081_005	denom_house_mort
 house_w_both_2_mort_and_loan	/	B25081_006	denom_house_mort
 house_no_mort	/	B25081_008	denom_house_mort
 disability_pct	+	B22010_003	B22010_006
-disability_pct	/	disability_pct	B22010_006
+disability_pct	/	disability_pct	B22010_001
 snap_past_12_mo	/	B22010_002	B22010_001
