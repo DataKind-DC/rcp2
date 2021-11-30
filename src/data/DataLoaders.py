@@ -46,7 +46,7 @@ class genericDataSet:
     
 class ACSData(genericDataSet):
     def __init__(self,year,level):
-        self.file_name = utils.DATA['acs'] / "acs_{}_features.csv".format(year)
+        self.file_name = utils.DATA['acs'] / "acs_{}_data.csv".format(year)
         super().__init__(level)
 
 
