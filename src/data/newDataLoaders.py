@@ -59,9 +59,7 @@ class ACSData():
         
         
 
-        # Integer indexing for all rows, but gets rid of county_name, state_name, and in_poverty
-        ACS = ACS.iloc[:,3:]
-        
+       
         # Remove missing values from dataframe
         ACS.replace([np.inf, -np.inf], np.nan,inplace = True)
         ACS.dropna(inplace = True)
@@ -73,6 +71,9 @@ class ACSData():
     def Munge(self,ACS,tot_pop,level='block_group'):
 
         ## ACS Munging
+        
+        ACS.drop(ACS.loc[:, 'state':'in_poverty'], inplace = True, axis = 1)
+        
         #education adjustment 
         ACS['educ_less_12th'] =  ACS.loc[:,'educ_nursery_4th':'educ_12th_no_diploma'].sum(axis =1 )
         ACS['educ_high_school'] =  ACS.loc[:,'educ_high_school_grad':'educ_some_col_no_grad'].sum(axis =1 )
@@ -91,6 +92,16 @@ class ACSData():
         ACS['house_val_300K_500K']=ACS.loc[:,'house_val_300K_400K':'house_val_400K_500K'].sum(axis =1 )
         ACS['house_val_more_500K'] = ACS.loc[:,'house_val_500K_750K':'house_val_more_2M'].sum(axis = 1)
         ACS.drop(ACS.loc[:, 'house_val_less_10K':'house_val_more_2M'], inplace = True, axis = 1)
+        
+        ACS['race_pct_black_or_amind'] = ACS.loc[:,'race_pct_black'] \
+                                       + ACS.loc[:,'race_pct_amind']
+
+        ACS['pct_alt_heat'] =  ACS.loc[:,'heat_pct_fueloil_kerosene']  \
+                       + ACS.loc[:,'heat_pct_coal']   \
+                       + ACS.loc[:,'heat_pct_wood']   \
+                       + ACS.loc[:,'heat_pct_bottled_tank_lpgas']
+
+        
         
         
         self.data = ACS
