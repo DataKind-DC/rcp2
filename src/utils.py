@@ -40,7 +40,7 @@ DATA = {
     "shapefiles": ROOT / "Data" / "03_Shapefiles",
     "shapefiles-census": ROOT / "Data" / "03_Shapefiles" / "2010_Census_shapefiles",
     "shapefiles-svi": ROOT / "Data" / "03_Shapefiles" / "SVI2016_US_shapefiles",
-    'acs' : ROOT /'Data' / 'ACS_Extraction' 
+    'acs' : ROOT /'Data' / 'Model Outputs' / 'ACS_Extraction' 
 }
 
 
