@@ -128,7 +128,7 @@ class ACSData():
 
 class NFIRSData():
     
-    def __init__(self,level,tot_pop,sev=False):
+    def __init__(self,level,tot_pop,sev=False, min_loss = 10000):
         self.file_name = utils.DATA['master'] /'NFIRS Fire Incident Data.csv'
         self.tot_pop = tot_pop
         self.level = level
@@ -137,16 +137,19 @@ class NFIRSData():
         self.fires = None
         self.top10 = None
         self.severeFire = None
+        self.min_loss = min_loss
         self.Load()
         # self.Clean(self.data)
         # munge to appropriate level 
-        self.Munge(self.data, self.tot_pop,self.level)
+        self.Munge(self.data, self.tot_pop,self.level, self.min_loss)
 
     def set_sev_loss(self, min_loss):
+        self.min_loss = min_loss
         nfirs = self.data
         nfirs['severe_fire'] = 'not_sev_fire'
-        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= min_loss)
+        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= self.min_loss)
         nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
+        nfirs['min_loss'] = np.where(nfirs['tot_loss']>=self.min_loss,'had_min_loss','no_min_loss')
         self.data = nfirs
 
         return
@@ -173,7 +176,7 @@ class NFIRSData():
         
     
 
-    def Munge(self, nfirs, tot_pop, level):
+    def Munge(self, nfirs, tot_pop, level, min_loss):
         #NFIRS Munging
 
         #Convert inc_date column values to python datetime type
@@ -184,19 +187,21 @@ class NFIRSData():
         # Ensure correct calculation of tot_loss column 
         nfirs['tot_loss'] = nfirs['prop_loss'] + nfirs['cont_loss']
 
-        # Create mask for new severe fire variable
-        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= 10000)
+        # # Create mask for new severe fire variable
+        # sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= 10000)
 
-        # By default assigns values of severe fire column as not severe
-        nfirs['severe_fire'] = 'not_sev_fire'
+        # # By default assigns values of severe fire column as not severe
+        # nfirs['severe_fire'] = 'not_sev_fire'
 
-        # Applies filter to severe fire column to label the severe fire instances correctly
-        nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
+        # # Applies filter to severe fire column to label the severe fire instances correctly
+        # nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
+
+        self.set_sev_loss(min_loss)
 
         # Create new NFIRS variables based on specified thresholds of existing variables in dataframe
         nfirs['had_inj'] = np.where(nfirs['oth_inj']>0,'had_inj','no_inj')
         nfirs['had_death'] = np.where(nfirs['oth_death']>0,'had_death','no_death')
-        nfirs['10k_loss'] = np.where(nfirs['tot_loss']>=10000,'had_10k_loss','no_10k_loss')
+        
 
         # Extract just the numeric portion of the geoid
         nfirs['geoid'] =  nfirs['geoid'].str.strip('#_')
