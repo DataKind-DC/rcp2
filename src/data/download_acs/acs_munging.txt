@@ -7,8 +7,12 @@ race_pct_white	/	B02001_002	B02001_001
 race_pct_whitenh	/	B03002_003	B03002_001
 race_pct_nonwhite	-	1	race_pct_white
 race_pct_nonwhitenh	-	1	race_pct_whitenh
-race_pct_amind	/	B02001_004	B02001_001
 race_pct_black	/	B02001_003	B02001_001
+race_pct_amind	/	B02001_004	B02001_001
+race_pct_asian	/	B02001_005	B02001_001
+race_pct_napi	/	B02001_006	B02001_001
+race_pct_other	/	B02001_007	B02001_001
+race_pct_two+	/	B02001_008	B02001_001
 race_pct_hisp	/	B03002_012	B03002_001
 denom_age	=	B01001_001
 age_under25_ma	+	B01001_003	B01001_004
@@ -192,3 +196,14 @@ house_no_mort	/	B25081_008	denom_house_mort
 disability_pct	+	B22010_003	B22010_006
 disability_pct	/	disability_pct	B22010_001
 snap_past_12_mo	/	B22010_002	B22010_001
+median_year_built	=	B25035_001
+single_unit_home	+	B25024_002	B25024_003
+single_unit_home	/	single_unit_home	B25024_001
+multi_unit_home	+	B25024_004	B25024_005
+multi_unit_home	+	multi_unit_home	B25024_006
+multi_unit_home	+	multi_unit_home	B25024_007
+multi_unit_home	+	multi_unit_home	B25024_008
+multi_unit_home	+	multi_unit_home	B25024_009
+multi_unit_home	/	multi_unit_home	B25024_001
+mobile_home	/	B25024_010	B25024_001
+boat_van_rv_home	/	B25024_011	B25024_001
