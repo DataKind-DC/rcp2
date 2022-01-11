@@ -2,57 +2,28 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from src import utils
-import sys
-# looks for acs 2016 data in Data/acs_2016/acs_2016_features.csv
-# looks for nfirs data in Data/NFIRS Fire Incident Data.csv
-# pass in desired geolevel as argument
-
-class genericDataSet:
-    def  __init__(self, level = 'block_group'):
-
-        #self.file_name= [] provide in subclasses  
-        #self.tot_pop = []
-        self.level = level
-        self.LoadAndClean()
-
-    def LoadAndClean(self):
-        Data_path = self.file_name
-        Data =  pd.read_csv(Data_path, dtype = {'GEOID':'object'},\
-        index_col = 1)
-        #print(Data)
-        self.CleanData(Data) 
 
 
-    def MungeData(self,tot_pop,level='block'):
-
-
-        Data = self.data 
-        Data = Data.multiply(tot_pop['tot_population'],axis= 'index')
-     
-        Data.index , tot_pop.index  = Data.index.str[0:utils.GEOID[level]], \
-                                  tot_pop.index.str[0:utils.GEOID[level]]
-
-        Data, tot_pop = Data.groupby(Data.index).sum(), \
-                   tot_pop.groupby(tot_pop.index).sum()
-
-        self.data = Data.divide(tot_pop['tot_population'],axis = 'index')
-        self.tot_pop = tot_pop
-
+class ACSData():
+    # TODO: typechecking
     
-    def CleanData(self):
-        pass
+    def __init__(self,year = 2016,level = 'block_group'):
 
-
-    
-class ACSData(genericDataSet):
-    def __init__(self,year,level):
         self.file_name = utils.DATA['acs'] / "acs_{}_data.csv".format(year)
-        super().__init__(level)
+        self.level = level
+        self.data = None
+        self.tot_pop = None
+        self.Load()
+        self.Clean(self.data)
+        self.Munge(self.data,self.tot_pop, self.level)
 
+    
+    def Load(self):
+        self.data = pd.read_csv(self.file_name, dtype = {'GEOID':'object'}, index_col = 1)
 
-    def CleanData(self,ACS):
-
-        ## Cleans and munges ACS data 
+    def Clean(self,ACS):
+    
+        ## Cleans ACS data 
         #  'ACS' - ACS variable from LoadACS
         #  'self.level' - geography level to munge the data to
         #            levels can be found in utils.GEOID
@@ -79,7 +50,7 @@ class ACSData(genericDataSet):
         
 
         
-        tot_pop = ACS[['tot_population']].groupby('GEOID').sum()
+        self.tot_pop = ACS[['tot_population']].groupby('GEOID').sum()
         # Drop all total count columns in ACS and keeps all percentage columns
         cols = ACS.columns.to_list()
         for col in cols:
@@ -88,14 +59,21 @@ class ACSData(genericDataSet):
         
         
 
-        # Integer indexing for all rows, but gets rid of county_name, state_name, and in_poverty
-        ACS = ACS.iloc[:,3:]
-        
+       
         # Remove missing values from dataframe
         ACS.replace([np.inf, -np.inf], np.nan,inplace = True)
         ACS.dropna(inplace = True)
+
         
+        self.data = ACS
+
+    
+    def Munge(self,ACS,tot_pop,level='block_group'):
+
         ## ACS Munging
+        
+        ACS.drop(ACS.loc[:, 'state':'in_poverty'], inplace = True, axis = 1)
+        
         #education adjustment 
         ACS['educ_less_12th'] =  ACS.loc[:,'educ_nursery_4th':'educ_12th_no_diploma'].sum(axis =1 )
         ACS['educ_high_school'] =  ACS.loc[:,'educ_high_school_grad':'educ_some_col_no_grad'].sum(axis =1 )
@@ -108,14 +86,13 @@ class ACSData(genericDataSet):
         ACS.drop(ACS.loc[:, 'house_yr_pct_2014_plus':'house_yr_pct_earlier_1939'], inplace = True, axis = 1)
         
         # housing Price adjustment
-       
-        ACS['house_val_less_125K']=ACS.loc[:,'house_val_50K_60K':'house_val_100K_125K'].sum(axis =1 )
-        ACS['house_val_125K_300K']=ACS.loc[:,'house_val_100K_125K':'house_val_250K_300K'].sum(axis =1 )
-        ACS['house_val_300K_500K']=ACS.loc[:,'house_val_125K_150K':'house_val_400K_500K'].sum(axis =1 )
+        ACS['house_val_less_50K']=ACS.loc[:,'house_val_less_10K':'house_val_40K_50K'].sum(axis =1 )
+        ACS['house_val_50_100K']=ACS.loc[:,'house_val_50K_60K':'house_val_90K_100K'].sum(axis =1 )
+        ACS['house_val_100K_300K']=ACS.loc[:,'house_val_100K_125K':'house_val_250K_300K'].sum(axis =1 )
+        ACS['house_val_300K_500K']=ACS.loc[:,'house_val_300K_400K':'house_val_400K_500K'].sum(axis =1 )
         ACS['house_val_more_500K'] = ACS.loc[:,'house_val_500K_750K':'house_val_more_2M'].sum(axis = 1)
         ACS.drop(ACS.loc[:, 'house_val_less_10K':'house_val_more_2M'], inplace = True, axis = 1)
-
-
+        
         ACS['race_pct_black_or_amind'] = ACS.loc[:,'race_pct_black'] \
                                        + ACS.loc[:,'race_pct_amind']
 
@@ -124,10 +101,11 @@ class ACSData(genericDataSet):
                        + ACS.loc[:,'heat_pct_wood']   \
                        + ACS.loc[:,'heat_pct_bottled_tank_lpgas']
 
-
-
-        # package 
+        
+        
+        
         self.data = ACS
+
         
         # munge to appropriate level 
 
@@ -135,26 +113,50 @@ class ACSData(genericDataSet):
             #ACS data already at block_group level
             self.tot_pop = tot_pop
         else:
-            self.MungeData(tot_pop,self.level)
+            Data = self.data 
+            Data = Data.multiply(tot_pop['tot_population'],axis= 'index')
+        
+            Data.index , tot_pop.index  = Data.index.str[0:utils.GEOID[level]], \
+                                    tot_pop.index.str[0:utils.GEOID[level]]
+
+            Data, tot_pop = Data.groupby(Data.index).sum(), \
+                    tot_pop.groupby(tot_pop.index).sum()
+
+            self.data = Data.divide(tot_pop['tot_population'],axis = 'index')
+            self.tot_pop = tot_pop
+
+
+class NFIRSData():
     
-
-
-
-
-
-class NFIRSData(genericDataSet):
-    
-    def __init__(self,level,tot_pop,sev=False):
+    def __init__(self,level,tot_pop,sev=False, min_loss = 10000):
         self.file_name = utils.DATA['master'] /'NFIRS Fire Incident Data.csv'
         self.tot_pop = tot_pop
         self.level = level
         self.severeFiresOnly = sev
-        self.LoadAndClean()
+        self.data = None
+        self.fires = None
+        self.top10 = None
+        self.severeFire = None
+        self.min_loss = min_loss
+        self.Load()
+        # self.Clean(self.data)
+        # munge to appropriate level 
+        self.Munge(self.data, self.tot_pop,self.level, self.min_loss)
+
+    def set_sev_loss(self, min_loss):
+        self.min_loss = min_loss
+        nfirs = self.data
+        nfirs['severe_fire'] = 'not_sev_fire'
+        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= self.min_loss)
+        nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
+        nfirs['min_loss'] = np.where(nfirs['tot_loss']>=self.min_loss,'had_min_loss','no_min_loss')
+        self.data = nfirs
+
+        return
 
 
 
-
-    def LoadAndClean(self):
+    def Load(self):
         cols_to_use = ['state','fdid','inc_date','oth_inj','oth_death','prop_loss',
                'cont_loss','tot_loss','geoid']
 
@@ -170,14 +172,11 @@ class NFIRSData(genericDataSet):
                     dtype = col_dtypes,
                     usecols = cols_to_use,
                     encoding='latin-1')
+        self.data = Data
+        
+    
 
-        self.CleanData(Data)
-
-
-             
-
-
-    def CleanData(self,nfirs):
+    def Munge(self, nfirs, tot_pop, level, min_loss):
         #NFIRS Munging
 
         #Convert inc_date column values to python datetime type
@@ -188,19 +187,21 @@ class NFIRSData(genericDataSet):
         # Ensure correct calculation of tot_loss column 
         nfirs['tot_loss'] = nfirs['prop_loss'] + nfirs['cont_loss']
 
-        # Create mask for new severe fire variable
-        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= 10000)
+        # # Create mask for new severe fire variable
+        # sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= 10000)
 
-        # By default assigns values of severe fire column as not severe
-        nfirs['severe_fire'] = 'not_sev_fire'
+        # # By default assigns values of severe fire column as not severe
+        # nfirs['severe_fire'] = 'not_sev_fire'
 
-        # Applies filter to severe fire column to label the severe fire instances correctly
-        nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
+        # # Applies filter to severe fire column to label the severe fire instances correctly
+        # nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
+
+        self.set_sev_loss(min_loss)
 
         # Create new NFIRS variables based on specified thresholds of existing variables in dataframe
         nfirs['had_inj'] = np.where(nfirs['oth_inj']>0,'had_inj','no_inj')
         nfirs['had_death'] = np.where(nfirs['oth_death']>0,'had_death','no_death')
-        nfirs['10k_loss'] = np.where(nfirs['tot_loss']>=10000,'had_10k_loss','no_10k_loss')
+        
 
         # Extract just the numeric portion of the geoid
         nfirs['geoid'] =  nfirs['geoid'].str.strip('#_')
@@ -212,15 +213,7 @@ class NFIRSData(genericDataSet):
 
         # package  
         self.data = nfirs
-
-        # munge to appropriate level 
-        self.MungeData(self.tot_pop,self.level)
-
-
-    
-
-    def MungeData(self,tot_pop,level):
-
+#-------------------------
         nfirs = self.data
         L = utils.GEOID[level]
         # shorten geoid to desired geography
@@ -260,33 +253,3 @@ class NFIRSData(genericDataSet):
 
         self.fires = fires
         self.top10 = top10
-
-
-
-class ARCPreparednessData(genericDataSet):
-    def __init__(self):
-        self.file_name = utils.DATA['master'] /'ARC Preparedness Data.csv'
-        super().__init__()
-
-    def CleanData(self,ARC):
-        self.data  = self.StandardizeColumnNames(ARC)
-
-    
-    def StandardizeColumnNames(self,df):
-        """
-        Standardizes column names
-        """
-        df.columns = map(str.lower, df.columns)
-        df.columns = df.columns.str.replace(', ', '_')
-        df.columns = df.columns.str.replace('-', '_')
-        df.columns = df.columns.str.replace('/', '_')
-        df.columns = df.columns.str.replace('(', '_')
-        df.columns = df.columns.str.replace(')', '_')
-        df.columns = df.columns.str.replace(' ', '_')
-        #print(df.columns)
-        df.dropna(inplace = True)
-        # trim geoid leading saftey marks 
-        df['geoid'] = df['geoid'].str[2:]
-
-        return df
-
