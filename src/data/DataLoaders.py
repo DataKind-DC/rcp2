@@ -255,11 +255,17 @@ class NFIRSData():
 
        # subset to severe fires if requested 
         if self.severeFiresOnly:
-            nfirs = nfirs[nfirs['severe_fire'] == 'sev_fire' ]
+            nfirs_geos = nfirs.index.unique()
+            nfirs_sev = nfirs[nfirs['severe_fire'] == 'sev_fire' ]
 
+            fires = pd.crosstab(nfirs_sev.index, nfirs_sev['year'])
+            # ensure no geographies were lost in restriction
+            missing_geos = nfirs_geos.difference(fires.index)
+            fires = fires.reindex(fires.index.append(missing_geos ) )
 
-        # create a list of number of fires per year for each geography
-        fires = pd.crosstab(nfirs.index, nfirs['year'])
+        else:
+            # create a list of number of fires per year for each geography
+            fires = pd.crosstab(nfirs.index, nfirs['year'])
         
         # Grab total population values pulled from ACS dataframe and assign to each census block in NFIRS dataframe
         fires = fires.merge(tot_pop, how = 'left', left_index = True, right_index = True)
