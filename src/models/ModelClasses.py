@@ -44,7 +44,7 @@ class FireRiskModels():
         if not ACS_variables:
             ACS_variables = ACS.data.columns
 
-        self.ACS_variables = ACS_variables
+        self.ACS_variables_used = ACS_variables
         ACS_data = ACS.data[ACS_variables]
         fires = NFIRS.fires
         top10 = NFIRS.top10
