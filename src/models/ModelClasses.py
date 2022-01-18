@@ -31,18 +31,21 @@ class ModelBaseClass:
 
 
 class FireRiskModels():
-    def  __init__(self,Modeltype ='propensity',ACS_year = '2016',
-    mode = 'Production'):
+    def  __init__(self,Modeltype ='propensity',ACS_year = '2016'):
 
         self.SEED = 0 
         self.type = Modeltype
-        self.mode = mode
         
 
-    def train(self,NFIRS,ACS,test_year='Current',n_years = 5):  
+    def train(self,NFIRS,ACS,ACS_variables =None, test_year='Current',n_years = 5):  
     # Create framework to predict whether a given census block has a fire risk score in the 90th percentile 
             # based on the specific number of previous years' data
         
+        if not ACS_variables:
+            ACS_variables = ACS.data.columns
+
+        self.ACS_variables = ACS_variables
+        ACS_data = ACS.data[ACS_variables]
         fires = NFIRS.fires
         top10 = NFIRS.top10
         years = top10.columns
@@ -74,10 +77,10 @@ class FireRiskModels():
         #
         #  Test
         # predict 2017 using 2016-2015 data  
-    
-        X_train, y_train,_ = self.munge_dataset(top10,fires,ACS.data,n_years,test_year_idx-1)
+       
+        X_train, y_train,_ = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx-1)
         
-        X_test, y_test,Input = self.munge_dataset(top10,fires,ACS.data,n_years,test_year_idx)
+        X_test, y_test,Input = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx)
         
         # Note: `Input` is used for manual data validation to ensure munging performed correctly 
         
@@ -121,14 +124,14 @@ class FireRiskModels():
 
         # Calculate test set performance
 
-        test_prediction_probs = model.predict_proba(X_test)
-        test_predictions = model.predict(X_test)
+        self.test_prediction_probs = model.predict_proba(X_test)
+        self.test_predictions = model.predict(X_test)
         #Model_Predictions = pd.Series(test_predictions)
         #Model_Prediction_Probs = pd.Series(test_prediction_probs[:,[1]].flatten())
-        print (confusion_matrix(y_test, test_predictions))
-        print (roc_auc_score(y_test, test_prediction_probs[:,1]))
-        print (classification_report(y_test,test_predictions))
-        print (log_loss(y_test,test_predictions))
+        print (confusion_matrix(y_test, self.test_predictions))
+        print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
+        print (classification_report(y_test,self.test_predictions))
+        print (log_loss(y_test,self.test_predictions))
 
 
         #Calculate feature importance for each model
@@ -257,7 +260,7 @@ class SmokeAlarmModels:
     def train(self):
 
         self.trainStatisticalModel()
-        self.trainDLmodel()
+        self.trainDLModel()
 
 
     def trainStatisticalModel(self):
@@ -265,14 +268,15 @@ class SmokeAlarmModels:
 
 
         # single level models 
-        for geo in ['state','county','tract','block_group'] :
+        for geo in ['State','County','Tract','Block_Group'] :
             df = self.createSingleLevelSmokeAlarmModel(geo) 
             name = 'SmokeAlarmModel' + geo + '.csv'
             df.index.name = 'geoid'
+            self.models[geo] = df
             df.index =  '#_' + df.index 
             out_path =  utils.DATA['model-outputs'] /'Smoke_Alarm_Single_Level' / name
             df.to_csv(out_path)
-            self.models[geo] = df
+            
         
         self.createMultiLevelSmokeAlarmModel()
         
@@ -417,9 +421,9 @@ class SmokeAlarmModels:
 
 
         for  geo,geo_len,df in [
-            ('tract', 11, self.models['Tract'].copy() ),
-            ('county', 5, self.models['County'].copy() ),
-            ('state', 2, self.models['State'].copy() )
+            ('tract', 11 + 2 , self.models['Tract'].copy() ),
+            ('county', 5 + 2 , self.models['County'].copy() ),
+            ('state', 2 + 2 , self.models['State'].copy() )
             ]:
 
             # find all remaining ids that are not in the block data 
@@ -445,10 +449,11 @@ class SmokeAlarmModels:
             del geo_index, geo_data
 
 
-        MultiLevelModel = MultiLevelModel.reset_index()
-        MultiLevelModel['geoid'] = '#_' + MultiLevelModel['geoid']    
+        #MultiLevelModel = MultiLevelModel.reset_index()
         self.models['MultiLevel'] = MultiLevelModel
         
+
+    
         out_path =  utils.DATA['model-outputs'] / 'SmokeAlarmModelMultiLevel.csv'
         MultiLevelModel.to_csv(out_path)
 
