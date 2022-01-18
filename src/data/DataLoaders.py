@@ -4,6 +4,40 @@ import pandas as pd
 from src import utils
 
 
+class ARCPData():
+    # american red cross preparedness data 
+    def __init__(self, file_name = 'ARC Preparedness Data.csv'  ):
+        self.data = None
+        self.file_name = utils.DATA['master'] / file_name 
+        self.Load()
+        self.standardizeColumnNames()
+
+    def Load(self):
+
+        self.data = pd.read_csv(self.file_name)
+
+    def standardizeColumnNames(self):
+        """
+        Standardizes column names
+        """
+
+        df = self.data
+        df.columns = map(str.lower, df.columns)
+        df.columns = df.columns.str.replace(', ', '_')
+        df.columns = df.columns.str.replace('-', '_')
+        df.columns = df.columns.str.replace('/', '_')
+        df.columns = df.columns.str.replace('(', '_')
+        df.columns = df.columns.str.replace(')', '_')
+        df.columns = df.columns.str.replace(' ', '_')
+        df.dropna(inplace = True)
+        # trim geoid leading saftey marks 
+        df['geoid'] = df['geoid'].str[2:]
+
+      
+
+        self.data = df   
+    
+
 class ACSData():
     # TODO: typechecking
     
