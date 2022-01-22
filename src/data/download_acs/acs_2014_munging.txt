@@ -133,16 +133,15 @@ house_pct_7_room	/	B25017_008	denom_house_room
 house_pct_8_room	/	B25017_009	denom_house_room
 house_pct_9_plus_room	/	B25017_010	denom_house_room
 denom_house_yr	=	B25034_001
-house_yr_pct_2014_plus	/	B25034_002	denom_house_yr
-house_yr_pct_2010_2013	/	B25034_003	denom_house_yr
-house_yr_pct_2000_2009	/	B25034_004	denom_house_yr
-house_yr_pct_1990_1999	/	B25034_005	denom_house_yr
-house_yr_pct_1980_1989	/	B25034_006	denom_house_yr
-house_yr_pct_1970_1979	/	B25034_007	denom_house_yr
-house_yr_pct_1960_1969	/	B25034_008	denom_house_yr
-house_yr_pct_1950_1959	/	B25034_009	denom_house_yr
-house_yr_pct_1940_1949	/	B25034_010	denom_house_yr
-house_yr_pct_earlier_1939	/	B25034_011	denom_house_yr
+house_yr_pct_2010_2013	/	B25034_002	denom_house_yr
+house_yr_pct_2000_2009	/	B25034_003	denom_house_yr
+house_yr_pct_1990_1999	/	B25034_004	denom_house_yr
+house_yr_pct_1980_1989	/	B25034_005	denom_house_yr
+house_yr_pct_1970_1979	/	B25034_006	denom_house_yr
+house_yr_pct_1960_1969	/	B25034_007	denom_house_yr
+house_yr_pct_1950_1959	/	B25034_008	denom_house_yr
+house_yr_pct_1940_1949	/	B25034_009	denom_house_yr
+house_yr_pct_earlier_1939	/	B25034_010	denom_house_yr
 denom_heat	=	B25040_001
 heat_pct_utility_gas	/	B25040_002	denom_heat
 heat_pct_bottled_tank_lpgas	/	B25040_003	denom_heat
@@ -183,9 +182,7 @@ house_val_300K_400K	/	B25075_021	house_tot_owned
 house_val_400K_500K	/	B25075_022	house_tot_owned
 house_val_500K_750K	/	B25075_023	house_tot_owned
 house_val_750K_1M	/	B25075_024	house_tot_owned
-house_val_1M_1.5M	/	B25075_025	house_tot_owned
-house_val_1.5M_2M	/	B25075_026	house_tot_owned
-house_val_more_2M	/	B25075_027	house_tot_owned
+house_val_1M_more	/	B25075_025	house_tot_owned
 denom_house_mort	=	B25081_001
 house_tot_w_mort	/	B25081_002	denom_house_mort
 house_w_1_mort	/	B25081_007	denom_house_mort
