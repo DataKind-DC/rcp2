@@ -16,8 +16,12 @@ from sklearn.metrics import roc_auc_score
 
 import pickle
 
-
-
+import xgboost as xgb 
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import auc, accuracy_score, confusion_matrix,mean_squared_error,mean_absolute_error,roc_auc_score, r2_score
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.stats import zscore, pearsonr
     
 
 
@@ -252,15 +256,26 @@ class FireRiskModels():
 
 
 class SmokeAlarmModels:
-    def  __init__(self,ARC,ACS):
-        self.arc = ARC
-        self.acs = ACS
+    def  __init__(self):
+                
+
         self.models = {}
         
-    def train(self):
+    def trainModels(self,ARC,ACS,ACS_variables,data_path):
+
+        if not ACS_variables:
+                ACS_variables = ACS.data.columns
+
+        self.ACS_variables_used = ACS_variables
+        ACS = ACS.data[ACS_variables]
+
+
+
+        self.arc = ARC.data
+        self.acs = ACS
 
         self.trainStatisticalModel()
-        self.trainDLModel()
+        return  self.trainDLModel(data_path)
 
 
     def trainStatisticalModel(self):
@@ -286,8 +301,136 @@ class SmokeAlarmModels:
 
 
 
-    def trainDLModel(self):
-        pass
+    def trainDLModel(self, data_path):
+        
+        sm = self.models['MultiLevel'].copy()
+        ACS_data = self.acs.copy()
+        
+        sm = sm.reset_index()
+        sm['geoid'] = sm['geoid'].str[2:]
+        sm['tract'] = sm['geoid'].str[:-1]
+        sm.set_index('geoid', inplace =  True)
+        sm_all = sm.copy()
+        sm_all = sm[ sm['geography'].isin(['county','state']) ]
+        sm = sm[ sm['geography'].isin(['tract','block_group']) ]
+        
+        rd = self.create_rurality_data(sm,data_path, True)
+        rd_all = self.create_rurality_data(sm_all, data_path)
+        
+        mdl,X_test,y_test = self.trainXGB(X = rd, ACS = ACS_data, y = sm, predict = 'Presence', modeltype= 'XGBoost')
+        
+        predictions = mdl.predict(rd_all.merge(ACS_data,how = 'left', left_index = True, right_index = True) )
+        sm_all['Predictions'] =np.clip(predictions,0,100)  
+        
+        sm_all.loc[:,['num_surveys','geography',
+              'detectors_found_prc',
+              'detectors_working_prc',
+              'Predictions'] ]
+        sm_all = sm_all.merge(rd_all['Population Density (per square mile), 2010'],how = 'left',left_index = True,right_index = True)
+         
+        return sm_all
+    
+    def trainXGB(self, X, ACS, y, predict, modeltype):
+        
+       assert(predict in ['Presence', 'Working'])  
+        
+       model = xgb.XGBRegressor(objective = 'reg:squarederror',random_state = 0)
+            
+       if  predict == 'Presence':
+           y = y['detectors_found_prc']
+       elif predict =='Working':
+           y = y['detectors_working_prc']
+
+
+       # merge in ACS Data into X unless NFIRS-Only model
+       if not ACS.empty:
+           X = X.merge(ACS, how ='left',left_index = True, right_index = True)
+           y = y.filter(X.index)
+   
+       # Create 80/20 training/testing set split
+       X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2 )
+       model = model.fit(X_train,y_train)
+        # Calculate training set performance
+       train_predictions = model.predict(X_train)
+       print('-----Training_Performance------')
+       print(mean_squared_error(y_train, train_predictions))
+       print ('Test RMSE: {}'.format(mean_squared_error(y_train, train_predictions, squared = False)) )
+       print ('Test MAE: {}'.format(mean_absolute_error(y_train, train_predictions)) )
+       sns.scatterplot(y_train,train_predictions) 
+       plt.show()
+    
+       # Calculate test set performance
+       test_predictions = model.predict(X_test)
+       print ('-----Test Performance ----- ')
+       print ('Test RMSE: {}'.format(mean_squared_error(y_test, test_predictions, squared = False)) )
+       print ('Test MAE: {}'.format(mean_absolute_error(y_test, test_predictions)) )
+       sns.scatterplot(y_test,test_predictions) 
+       plt.show()
+       print ('Test Correlation: {}'.format(pearsonr(y_test, test_predictions)) )
+       print ('Test R-squared: {}'.format(r2_score(y_test, test_predictions)) )
+
+       #Calculate feature importance for each model
+       if modeltype == 'XGBoost':
+           importances = model.feature_importances_
+           indices = np.argsort(importances)[::-1]
+           print("\n Feature ranking:")
+           for f in range(len(X_test.columns)):
+               print("%d. %s (%f)" % (f + 1, X_test.columns[indices[f]], importances[indices[f]])) 
+
+       return  model,X_test,y_test
+
+
+        
+        
+    def create_rurality_data(self, sm, data_path, subset_county = False): 
+        #Rurality Data Munging 
+        rd = pd.read_csv( data_path/'Master Project Data'/'Tract Rurality Data.csv', dtype = {'Tract':'object'},encoding = 'latin-1' )
+        rd['Population Density (per square mile), 2010'] =  rd['Population Density (per square mile), 2010'].str.replace(',','').astype('float')
+        rd['Tract'] = rd['Tract'].str[2:]
+        rd = rd.iloc[:,[0,2,4,6,8]]
+        block_tract = sm['tract'].to_frame()
+        block_tract = block_tract.reset_index()
+        rd = block_tract.merge(rd, how = 'left', left_on = 'tract' , right_on ='Tract')
+        rd.set_index('geoid',inplace= True)
+        rd = rd.iloc[:,2:]
+        rd['Select State'] = rd['Select State'].astype('category')
+
+        # add state level model estimates 
+        sms = pd.rd = pd.read_csv( data_path /'Model Outputs'/'Smoke_Alarm_Single_Level'/ 'SmokeAlarmModelState.csv')
+        sms['geoid'] = sms['geoid'].str[2:]
+        sms =  sms.loc[:,['geoid','detectors_found_prc']]
+        sms = sms.rename(columns= {'geoid':'state_geoid'}  )
+
+        rd['state_geoid'] = rd.index.str[:2]
+        rd = rd.reset_index()
+        rd = rd.merge(sms,how = 'left', on = 'state_geoid' )
+        rd.drop('state_geoid',axis = 1,inplace = True)
+        rd = rd.rename(columns = {'detectors_found_prc':'state_detectors_found_prc'}) 
+        rd = rd.set_index('geoid')
+
+
+        # add county level estimates
+        smc = pd.read_csv( data_path /'Model Outputs'/'Smoke_Alarm_Single_Level'/ 'SmokeAlarmModelCounty.csv')
+        smc['geoid'] = smc['geoid'].str[2:]
+        if subset_county:
+            smc.iloc[0::2,:] = np.nan
+        smc =  smc.loc[:,['geoid','detectors_found_prc']]
+        smc = smc.rename(columns= {'geoid':'county_geoid'}  )
+
+        rd['county_geoid'] = rd.index.str[:5]
+        rd = rd.reset_index()
+        rd = rd.merge(smc,how = 'left', on = 'county_geoid' )
+        rd.drop('county_geoid',axis = 1,inplace = True)
+        rd = rd.rename(columns = {'detectors_found_prc':'county_detectors_found_prc'}) 
+        rd = rd.set_index('geoid')
+  #  rd['RUCA_rurality_index'] = rd['Primary RUCA Code 2010']
+  #  rd[rd['RUCA_rurality_index'] > 10 ] = np.NaN
+        rd = rd.iloc[:,3:]
+        self.rd = rd
+
+        return rd 
+        
+        
 
     def CreateConfidenceIntervals(self,num_surveys,percentage):
         # this function takes the cleaned data and adds a confidence interval 
@@ -456,7 +599,6 @@ class SmokeAlarmModels:
     
         out_path =  utils.DATA['model-outputs'] / 'SmokeAlarmModelMultiLevel.csv'
         MultiLevelModel.to_csv(out_path)
-
 
 
 
