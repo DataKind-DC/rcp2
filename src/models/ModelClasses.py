@@ -311,8 +311,7 @@ class SmokeAlarmModels:
         sm['tract'] = sm['geoid'].str[:-1]
         sm.set_index('geoid', inplace =  True)
         sm_all = sm.copy()
-        sm_all = sm[ sm['geography'].isin(['county','state']) ]
-        sm = sm[ sm['geography'].isin(['tract','block_group']) ]
+        sm = sm[ sm['geography'].isin(['tract','block_group']) ].copy()
         
         rd = self.create_rurality_data(sm,data_path, True)
         rd_all = self.create_rurality_data(sm_all, data_path)
