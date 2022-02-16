@@ -207,3 +207,4 @@ multi_unit_home	+	multi_unit_home	B25024_009
 multi_unit_home	/	multi_unit_home	B25024_001
 mobile_home	/	B25024_010	B25024_001
 boat_van_rv_home	/	B25024_011	B25024_001
+spanish_speaking	/	B16002_003	B16002_001

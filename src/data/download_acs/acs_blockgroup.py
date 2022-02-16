@@ -183,6 +183,23 @@ def get_vars_lookup(year, vars, transforms):
         name = name[:-1]
         vars_dict[name] = '{c}: {l}'.format(c=concept,l=label)
 
+    #first letter might be wrong- check if vars in vars_dict
+    check_var = [key in vars_dict for key in vars]
+    false_var = [i for i, x in enumerate(check_var) if not x ]
+    
+    #for each element that wasn't found, try replacing first letter
+    if false_var is not []:
+        for i in false_var:
+            if vars[i][0] == 'B':
+                vars_new = 'C'+vars[i][1:]
+            else:
+                vars_new = 'B'+vars[i][1:]
+            #replace in transforms and vars
+            transforms.replace(vars[i], vars_new, inplace = True)
+            vars[i] = vars_new
+                
+    
+    
     vars_labels = [var + ' = ' + vars_dict[var] for var in vars]
 
     transforms = transforms.where(pd.notnull(transforms), None)
@@ -194,15 +211,16 @@ def get_vars_lookup(year, vars, transforms):
         arg2 = row['argument2']
         if arg2==None:
             t = "{vn} = {vd} ({a1})".format(vn=vn, vd=vars_dict[arg1], a1=arg1)
-        else:
-            if arg1[0] == 'B':
+        else: #check if first letter is B or C (census raw variable)
+            if arg1[0] == 'B' or arg1[0] == 'C':
                 arg1 = vars_dict[arg1] + "({0})".format(arg1)
-            if arg2[0] == 'B':
+            if arg2[0] == 'B' or arg2[0] == 'C':
                 arg2 = vars_dict[arg2] + "({0})".format(arg2)
             t = "{vn} = {a1} {op} {a2}".format(vn=vn, a1=arg1, op=op, a2=arg2)
         transformations.append(t)
     vars_transforms = vars_labels + transformations
-    return vars_transforms
+    return vars_transforms, vars
+
 
 def get_vars_data(vars, state_code, year):
     """ downloads variable data from census
@@ -235,7 +253,7 @@ def get_vars_data(vars, state_code, year):
             break
         except:
             continue
-    
+    #sometimes this breaks
     if vars_data is None:
         logging.error('unable to download vars')
         return
@@ -332,6 +350,7 @@ def acs_main(state, year, vars_file, output_path):
     logging.info('downloading {st}'.format(st=state))
 
     state_data = pd.DataFrame()
+    print(state)
     state_code = STATE_CODES[state][1]
 
     output_path = output_path.format(year=year)
@@ -346,11 +365,13 @@ def acs_main(state, year, vars_file, output_path):
     transforms,vars = extract_vars(vars_file)
 
     # create vars and transformation lookup file
-    if not pathlib.Path(column_lookup).exists():
-        logging.info('creating {cl}'.format(cl=column_lookup))
-        vars_lookup = get_vars_lookup(year, vars.copy(),transforms)
-        with open(column_lookup, 'w') as f:
-            f.write('\n'.join(vars_lookup))
+    # do this even if file already exists b/c changing vars if starting letter
+    # needs to be changed
+    #if not pathlib.Path(column_lookup).exists():
+    #    logging.info('creating {cl}'.format(cl=column_lookup))
+    vars_lookup, vars = get_vars_lookup(year, vars.copy(),transforms)
+    with open(column_lookup, 'w') as f:
+        f.write('\n'.join(vars_lookup))
 
     
     # call api in batches of 50 vars (api limit) at a time 
@@ -371,10 +392,13 @@ def acs_main(state, year, vars_file, output_path):
     state_data.insert(0, 'state', STATE_CODES[state][0])
     
     # transforms
-    transforms = pd.read_csv(vars_file, sep='\t')
+    #remove line above- made changes to transforms
+    #transforms = pd.read_csv(vars_file, sep='\t')
     state_data = do_transformations(state_data, transforms)
     # The following line removes the raw data leaving only the transformations
+    # some variables start with B and other C (could probably combine)
     state_data = state_data.loc[:,~state_data.columns.str.startswith('B')]
+    state_data = state_data.loc[:,~state_data.columns.str.startswith('C')]
     state_data.to_csv(output_file, index=False)
     
     logging.info('{st} data downloaded'.format(st=state))
