@@ -84,7 +84,9 @@ class FireRiskModels():
        
         X_train, y_train,_ = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx-1)
         
-        X_test, y_test,Input = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx)
+        X_test, y_test,Input = self.munge_dataset_test(top10,fires,ACS_data,n_years,test_year_idx)
+        print(len(X_test))
+        print(len(y_test))
         
         # Note: `Input` is used for manual data validation to ensure munging performed correctly 
         
@@ -132,10 +134,10 @@ class FireRiskModels():
         self.test_predictions = model.predict(X_test)
         #Model_Predictions = pd.Series(test_predictions)
         #Model_Prediction_Probs = pd.Series(test_prediction_probs[:,[1]].flatten())
-        print (confusion_matrix(y_test, self.test_predictions))
-        print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
-        print (classification_report(y_test,self.test_predictions))
-        print (log_loss(y_test,self.test_predictions))
+        #print (confusion_matrix(y_test, self.test_predictions))
+        #print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
+        #print (classification_report(y_test,self.test_predictions))
+        #print (log_loss(y_test,self.test_predictions))
 
 
         #Calculate feature importance for each model
@@ -201,6 +203,54 @@ class FireRiskModels():
         
         return X,y,out_fires 
 
+    @staticmethod
+    def munge_dataset_test(top10,fires,ACS,n_years,test_year_idx):    
+        years = top10.columns
+        test_loc = test_year_idx
+        
+        # convert format for consistent output
+        X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
+        
+        #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
+
+        #sm = np.nansum(X, axis = 1 )
+        #mu = np.nanmean(X, axis = 1)
+        mx = np.nanmax(X, axis =1)
+        md = np.nanmedian(X,axis =1 )
+        X['Median'] = md  
+        #X['Sum']  = sm
+        #X['Mean'] = mu
+        X['Max']  = mx
+        
+        
+        
+    
+        
+        y  = top10.iloc[:,test_loc]
+        
+    
+
+
+
+        # merge in ACS Data into X unless NFIRS-Only model
+        out_fires = []
+        if not ACS.empty:
+            
+            # save copy for manual validation
+            out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
+            
+            X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
+            X = X.merge(ACS, how ='right',left_index = True, right_index = True)
+            
+            
+            
+            
+
+        
+        
+        return X,y,out_fires     
+    
+    
     @staticmethod
     def resample_df(X,y,upsample=True,seed = 0):
         from sklearn.utils import resample
