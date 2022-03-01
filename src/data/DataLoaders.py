@@ -159,7 +159,30 @@ class ACSData():
             self.data = Data.divide(tot_pop['tot_population'],axis = 'index')
             self.tot_pop = tot_pop
 
+class SVIData():
+    # TODO: typechecking
+    # level and year are fixe
+    def __init__(self,ACS):
 
+        self.file_name = utils.DATA['svi'] / "SVI Tract Data.csv"
+        self.data = None
+        self.Load()
+        self.Clean(ACS)
+        
+    def Load(self):
+        self.data = pd.read_csv(self.file_name, encoding='ISO-8859-1')
+        self.data['Tract'] = self.data['GEOID'].str[2:]
+    
+    def Clean(self, ACS):
+        ACS['Tract'] = ACS.index.str[:-1]
+        ACS['geos'] = ACS.index
+        merged = ACS.merge(self.data, how = 'left', left_on = 'Tract' , right_on ='Tract')
+        
+        merged.set_index('geos', inplace=True)
+        cols = ['inc_pct_poverty','RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']
+        self.data = merged[cols]
+            
+  
 class NFIRSData():
     
     def __init__(self,level,tot_pop,sev=False, min_loss = 10000):

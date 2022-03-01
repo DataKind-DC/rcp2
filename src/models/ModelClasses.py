@@ -311,7 +311,7 @@ class SmokeAlarmModels:
 
         self.models = {}
         
-    def trainModels(self,ARC,ACS,ACS_variables,data_path):
+    def trainModels(self,ARC,ACS,SVI, ACS_variables,svi_use, data_path):
 
         if not ACS_variables:
                 ACS_variables = ACS.data.columns
@@ -323,7 +323,9 @@ class SmokeAlarmModels:
 
         self.arc = ARC.data
         self.acs = ACS
-
+        self.svi = SVI.data
+        self.svi_use = svi_use
+        
         self.trainStatisticalModel()
         return  self.trainDLModel(data_path)
 
@@ -354,7 +356,11 @@ class SmokeAlarmModels:
     def trainDLModel(self, data_path):
         
         sm = self.models['MultiLevel'].copy()
-        ACS_data = self.acs.copy()
+        if self.svi_use:
+            df = self.svi.copy()
+        else:
+            df = self.acs.copy()        
+        
         
         sm = sm.reset_index()
         sm['geoid'] = sm['geoid'].str[2:]
@@ -366,9 +372,9 @@ class SmokeAlarmModels:
         rd = self.create_rurality_data(sm,data_path, True)
         rd_all = self.create_rurality_data(sm_all, data_path)
         
-        mdl,X_test,y_test = self.trainXGB(X = rd, ACS = ACS_data, y = sm, predict = 'Presence', modeltype= 'XGBoost')
+        mdl,X_test,y_test = self.trainXGB(X = rd, df = df, y = sm, predict = 'Presence', modeltype= 'XGBoost')
         
-        predictions = mdl.predict(rd_all.merge(ACS_data,how = 'left', left_index = True, right_index = True) )
+        predictions = mdl.predict(rd_all.merge(df,how = 'left', left_index = True, right_index = True) )
         sm_all['Predictions'] =np.clip(predictions,0,100)  
         
         sm_all.loc[:,['num_surveys','geography',
@@ -379,7 +385,7 @@ class SmokeAlarmModels:
          
         return sm_all
     
-    def trainXGB(self, X, ACS, y, predict, modeltype):
+    def trainXGB(self, X, df, y, predict, modeltype):
         
        assert(predict in ['Presence', 'Working'])  
         
@@ -392,8 +398,8 @@ class SmokeAlarmModels:
 
 
        # merge in ACS Data into X unless NFIRS-Only model
-       if not ACS.empty:
-           X = X.merge(ACS, how ='left',left_index = True, right_index = True)
+       if not df.empty:
+           X = X.merge(df, how ='left',left_index = True, right_index = True)
            y = y.filter(X.index)
    
        # Create 80/20 training/testing set split
