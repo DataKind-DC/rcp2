@@ -372,6 +372,11 @@ class SmokeAlarmModels:
         rd = self.create_rurality_data(sm,data_path, True)
         rd_all = self.create_rurality_data(sm_all, data_path)
         
+        if self.svi_use:
+            rd = rd['Population Density (per square mile), 2010'].to_frame()
+            rd_all = rd_all['Population Density (per square mile), 2010'].to_frame()
+        
+      
         mdl,X_test,y_test = self.trainXGB(X = rd, df = df, y = sm, predict = 'Presence', modeltype= 'XGBoost')
         
         predictions = mdl.predict(rd_all.merge(df,how = 'left', left_index = True, right_index = True) )
