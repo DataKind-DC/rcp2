@@ -96,7 +96,7 @@ class ACSData():
        
         # Remove missing values from dataframe
         ACS.replace([np.inf, -np.inf], np.nan,inplace = True)
-        ACS.dropna(inplace = True)
+        #ACS.dropna(inplace = True)
 
         
         self.data = ACS
