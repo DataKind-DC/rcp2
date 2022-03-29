@@ -534,7 +534,7 @@ class SmokeAlarmModels:
         
         df['geoid'] = df['geoid'].str[: geo_level_dict[geo_level]]
         acs.index =  acs.index.str[:geo_level_dict[geo_level]]
-        acs.drop_duplicates(inplace = True)
+        #acs.drop_duplicates(inplace = True)
         ## binarize pre_existing_alarms and _tested_and_working
         #  values will now be: 0 if no detectors present and 1 if any number were present
         df['pre_existing_alarms'].where(df['pre_existing_alarms'] < 1, other = 1, inplace = True) 
