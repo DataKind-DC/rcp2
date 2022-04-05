@@ -170,7 +170,7 @@ class SVIData():
         self.Clean(ACS)
         
     def Load(self):
-        self.data = pd.read_csv(self.file_name)
+        self.data = pd.read_csv(self.file_name, encoding='ISO-8859-1')
         self.data['Tract'] = self.data['GEOID'].str[2:]
     
     def Clean(self, ACS):

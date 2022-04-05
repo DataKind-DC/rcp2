@@ -83,6 +83,7 @@ class FireRiskModels():
         # predict 2017 using 2016-2015 data  
        
         X_train, y_train,_ = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx-1)
+        self.X_train = X_train
         
         X_test, y_test,Input = self.munge_dataset_test(top10,fires,ACS_data,n_years,test_year_idx)
         print(len(X_test))
@@ -317,12 +318,13 @@ class SmokeAlarmModels:
                 ACS_variables = ACS.data.columns
 
         self.ACS_variables_used = ACS_variables
-        ACS = ACS.data[ACS_variables]
+        #ACS = ACS.data[ACS_variables]
 
 
 
         self.arc = ARC.data
-        self.acs = ACS
+        self.acs = ACS.data[ACS_variables]
+        self.acs_pop = ACS.tot_pop
         self.svi = SVI.data
         self.svi_use = svi_use
         
@@ -375,11 +377,15 @@ class SmokeAlarmModels:
         if self.svi_use:
             rd = rd['Population Density (per square mile), 2010'].to_frame()
             rd_all = rd_all['Population Density (per square mile), 2010'].to_frame()
+            
+
+        acs_pop = self.acs_pop[self.acs_pop['tot_population'] >= 50 ] 
+        rd = rd.filter(acs_pop.index, axis= 0)
         
-      
         mdl,X_test,y_test = self.trainXGB(X = rd, df = df, y = sm, predict = 'Presence', modeltype= 'XGBoost')
         
         predictions = mdl.predict(rd_all.merge(df,how = 'left', left_index = True, right_index = True) )
+
         sm_all['Predictions'] =np.clip(predictions,0,100)  
         
         sm_all.loc[:,['num_surveys','geography',
@@ -531,10 +537,9 @@ class SmokeAlarmModels:
         acs = self.acs.copy()
         # dict with relevant length of GEOID for tract geography
         geo_level_dict = {'State':2,'County':5,'Tract':11,'Block_Group':12}
-        
         df['geoid'] = df['geoid'].str[: geo_level_dict[geo_level]]
         acs.index =  acs.index.str[:geo_level_dict[geo_level]]
-        #acs.drop_duplicates(inplace = True)
+        #acs.drop_duplicates(inplace = True) #why drop duplicates?
         ## binarize pre_existing_alarms and _tested_and_working
         #  values will now be: 0 if no detectors present and 1 if any number were present
         df['pre_existing_alarms'].where(df['pre_existing_alarms'] < 1, other = 1, inplace = True) 
@@ -546,22 +551,20 @@ class SmokeAlarmModels:
         ## create detectors dataset
         # This happens by grouping data both on pre_existing alarms and then _tested_and working alarms 
         # and then merging the two into the final dataset
-
         detectors =  df.groupby('geoid')['pre_existing_alarms'].agg({np.size ,
                                                                     np.sum,
                                                                     lambda x: np.sum(x)/np.size(x)* 100 })
-
         detectors.rename({'size':'num_surveys','sum':'detectors_found_total','<lambda_0>':'detectors_found_prc'},
                         axis =1,
                         inplace = True)
-
         detectors['detectors_found_prc'] = detectors['detectors_found_prc'].round(2)
         
     
         
+
         d2 =  df.groupby('geoid')['pre_existing_alarms_tested_and_working'].agg({np.size,np.sum, 
                                                                                 lambda x: np.sum(x)/np.size(x)* 100 })
-        
+
         d2.rename({'size':'num_surveys2','sum':'detectors_working_total','<lambda_0>':'detectors_working_prc'},
                         axis =1,
                         inplace = True)
@@ -569,7 +572,6 @@ class SmokeAlarmModels:
         
         d2['detectors_working_prc'] = d2['detectors_working_prc'].round(2)
         
-
         detectors = detectors.merge(d2,how = 'left', on ='geoid')
 
         detectors['detectors_found_CI'] = self.CreateConfidenceIntervals(detectors['num_surveys'].values,
@@ -592,11 +594,11 @@ class SmokeAlarmModels:
                         'detectors_working_CI']
         
         detectors = detectors[column_order]
-        
         detectors = detectors[~pd.isna(detectors.index)]
     # fix block model to ensure blocks that weren't visited are added to the model 
         detectors = detectors.reindex(detectors.index.union(acs.index.unique()),fill_value = 0)
         detectors = detectors[~pd.isna(detectors.index)]
+
     
 
     # test if there are missing values in resultant 
