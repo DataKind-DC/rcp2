@@ -85,7 +85,7 @@ class FireRiskModels():
         X_train, y_train,_ = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx-1)
         self.X_train = X_train
         
-        X_test, y_test,Input = self.munge_dataset_test(top10,fires,ACS_data,n_years,test_year_idx)
+        X_test, y_test,Input, self.years = self.munge_dataset_test(top10,fires,ACS_data,n_years,test_year_idx)
         print(len(X_test))
         print(len(y_test))
         
@@ -202,7 +202,7 @@ class FireRiskModels():
 
         
         
-        return X,y,out_fires 
+        return X,y,out_fires,
 
     @staticmethod
     def munge_dataset_test(top10,fires,ACS,n_years,test_year_idx):    
@@ -211,7 +211,7 @@ class FireRiskModels():
         
         # convert format for consistent output
         X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
-        
+        x_cols = X.columns
         #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
 
         #sm = np.nansum(X, axis = 1 )
@@ -249,7 +249,7 @@ class FireRiskModels():
 
         
         
-        return X,y,out_fires     
+        return X,y,out_fires, x_cols
     
     
     @staticmethod

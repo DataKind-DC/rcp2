@@ -79,17 +79,19 @@ class ACSData():
         if 'NAME' in ACS.columns:
             ACS.drop('NAME','columns',inplace= True)
         
-        if 'inc_pcincome' in ACS.columns:
-            ACS.drop('inc_pcincome','columns',inplace= True)
+        #if 'inc_pcincome' in ACS.columns:
+        #    ACS.drop('inc_pcincome','columns',inplace= True)
         
 
         
         self.tot_pop = ACS[['tot_population']].groupby('GEOID').sum()
         # Drop all total count columns in ACS and keeps all percentage columns
-        cols = ACS.columns.to_list()
-        for col in cols:
-            if  col.find('tot') != -1 : 
-                ACS.drop(col,'columns', inplace = True)
+        #cols = ACS.columns.to_list()
+        #print(cols)
+        #for col in cols:
+        #    if  col.find('tot') != -1 : 
+        #        print(col)
+        #        ACS.drop(col,'columns', inplace = True)
         
         
 
@@ -106,8 +108,8 @@ class ACSData():
 
         ## ACS Munging
         
-        ACS.drop(ACS.loc[:, 'state':'in_poverty'], inplace = True, axis = 1)
-        
+        #ACS.drop(ACS.loc[:, 'state':'in_poverty'], inplace = True, axis = 1)
+        print(ACS.columns)
         #education adjustment 
         ACS['educ_less_12th'] =  ACS.loc[:,'educ_nursery_4th':'educ_12th_no_diploma'].sum(axis =1 )
         ACS['educ_high_school'] =  ACS.loc[:,'educ_high_school_grad':'educ_some_col_no_grad'].sum(axis =1 )
@@ -137,7 +139,7 @@ class ACSData():
 
         
         
-        
+        print(ACS.columns)
         self.data = ACS
 
         
@@ -204,7 +206,7 @@ class NFIRSData():
         self.min_loss = min_loss
         nfirs = self.data
         nfirs['severe_fire'] = 'not_sev_fire'
-        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= self.min_loss)
+        sev_fire_mask = (nfirs['oth_death'] > 0) | (nfirs['oth_inj'] > 0) | (nfirs['tot_loss'] >= self.min_loss) | (nfirs['tot_units_affected'] > 1)
         nfirs.loc[sev_fire_mask,'severe_fire'] = 'sev_fire'
         nfirs['min_loss'] = np.where(nfirs['tot_loss']>=self.min_loss,'had_min_loss','no_min_loss')
         self.data = nfirs
@@ -215,7 +217,7 @@ class NFIRSData():
 
     def Load(self):
         cols_to_use = ['state','fdid','inc_date','oth_inj','oth_death','prop_loss',
-               'cont_loss','tot_loss','geoid']
+               'cont_loss','tot_loss','tot_units_affected','geoid']
 
         # Specify particular data type for geoid column
         col_dtypes = {'geoid':str}
@@ -306,8 +308,9 @@ class NFIRSData():
         # population adjustment to fires per_n_people 
         per_n_people = 1000
         min_year,max_year = nfirs['year'].min(), nfirs['year'].max()
+        fires_noAdjustment = fires.copy()
         fires.loc[:,min_year:max_year] = fires.loc[:,min_year:max_year].div(fires['tot_population'], axis = 'index') * per_n_people
-
+        
         # remove population
         fires.drop('tot_population',axis = 1, inplace = True)
 
@@ -315,4 +318,5 @@ class NFIRSData():
         top10 = fires > fires.quantile(.9)
 
         self.fires = fires
+        self.fires_noAdjustment = fires_noAdjustment
         self.top10 = top10
