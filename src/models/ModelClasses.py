@@ -50,6 +50,7 @@ class FireRiskModels():
 
         self.ACS_variables_used = ACS_variables
         ACS_data = ACS.data[ACS_variables]
+        ACS_data = ACS_data
         fires = NFIRS.fires
         top10 = NFIRS.top10
         years = top10.columns
@@ -67,7 +68,7 @@ class FireRiskModels():
         else:
             raise ValueError(f"{test_year} is not in NFIRS Data." 
                              f" The most recent year in NFIRS is  {fires.columns[-1]}")
-
+        self.test_year = test_year
      
                 
         # each model will train on `n_years` of data to predict the locations subsequent year with highest fire risk 
@@ -85,7 +86,7 @@ class FireRiskModels():
         X_train, y_train,_ = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx-1)
         self.X_train = X_train
         
-        X_test, y_test,Input, self.years = self.munge_dataset_test(top10,fires,ACS_data,n_years,test_year_idx)
+        X_test, y_test,Input, self.train_years = self.munge_dataset_test(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)
         print(len(X_test))
         print(len(y_test))
         
@@ -130,14 +131,16 @@ class FireRiskModels():
 
 
         # Calculate test set performance
-
+        print(X_test.columns)
+        print(X_train.columns)
         self.test_prediction_probs = model.predict_proba(X_test)
-        self.test_predictions = model.predict(X_test)
+        self.test_predictions = np.array(model.predict(X_test), dtype=bool)
         #Model_Predictions = pd.Series(test_predictions)
         #Model_Prediction_Probs = pd.Series(test_prediction_probs[:,[1]].flatten())
-        #print (confusion_matrix(y_test, self.test_predictions))
-        #print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
-        #print (classification_report(y_test,self.test_predictions))
+        print(np.count_nonzero(np.isnan(self.test_predictions)))
+        print (confusion_matrix(y_test, self.test_predictions))
+        print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
+        print (classification_report(y_test,self.test_predictions))
         #print (log_loss(y_test,self.test_predictions))
 
 
@@ -191,12 +194,15 @@ class FireRiskModels():
         if not ACS.empty:
             
             # save copy for manual validation
-            out_fires = X.copy().merge(ACS, how ='left',left_index = True, right_index = True)
+            out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
+            #out_fires = X.copy().merge(ACS, how ='left',left_index = True, right_index = True)
             
             X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
-            X = X.merge(ACS, how ='left',left_index = True, right_index = True)
+            X = X.merge(ACS, how ='right',left_index = True, right_index = True)
+            #X = X.merge(ACS, how ='left',left_index = True, right_index = True)
             
-            
+            print(len(X))
+            print(len(y))
             
             
 
@@ -205,7 +211,7 @@ class FireRiskModels():
         return X,y,out_fires,
 
     @staticmethod
-    def munge_dataset_test(top10,fires,ACS,n_years,test_year_idx):    
+    def munge_dataset_test(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
         years = top10.columns
         test_loc = test_year_idx
         
@@ -228,7 +234,9 @@ class FireRiskModels():
     
         
         y  = top10.iloc[:,test_loc]
-        
+        #merge to get correct list of geoids then replace NaN with False
+        y = tot_pop.merge(y, how = 'left', left_index = True, right_index = True)
+        y = y.drop(columns = ['tot_population']).fillna(False)
     
 
 
@@ -236,11 +244,12 @@ class FireRiskModels():
         # merge in ACS Data into X unless NFIRS-Only model
         out_fires = []
         if not ACS.empty:
-            
             # save copy for manual validation
+            #merge to get correct list of geoids, then replace NaN with 0
             out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
             
             X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
+            X = X.fillna(0)
             X = X.merge(ACS, how ='right',left_index = True, right_index = True)
             
             
@@ -414,7 +423,7 @@ class SmokeAlarmModels:
            y = y.filter(X.index)
    
        # Create 80/20 training/testing set split
-       X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2 )
+       X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2, random_state = 0 )
        model = model.fit(X_train,y_train)
         # Calculate training set performance
        train_predictions = model.predict(X_train)

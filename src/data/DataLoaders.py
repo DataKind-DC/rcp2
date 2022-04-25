@@ -109,7 +109,7 @@ class ACSData():
         ## ACS Munging
         
         #ACS.drop(ACS.loc[:, 'state':'in_poverty'], inplace = True, axis = 1)
-        print(ACS.columns)
+        #print(ACS.columns)
         #education adjustment 
         ACS['educ_less_12th'] =  ACS.loc[:,'educ_nursery_4th':'educ_12th_no_diploma'].sum(axis =1 )
         ACS['educ_high_school'] =  ACS.loc[:,'educ_high_school_grad':'educ_some_col_no_grad'].sum(axis =1 )
@@ -139,7 +139,7 @@ class ACSData():
 
         
         
-        print(ACS.columns)
+        #print(ACS.columns)
         self.data = ACS
 
         
@@ -293,7 +293,9 @@ class NFIRSData():
             fires = pd.crosstab(nfirs.index, nfirs['year'])
         
         # Grab total population values pulled from ACS dataframe and assign to each census block in NFIRS dataframe
-        fires = fires.merge(tot_pop, how = 'left', left_index = True, right_index = True)
+        #fires = fires.merge(tot_pop, how = 'left', left_index = True, right_index = True)
+        #change order to keep ACS geoids
+        fires = tot_pop.merge(fires, how = 'left', left_index = True, right_index = True)
         fires.index = fires.index.rename('geoid')
 
 
