@@ -68,7 +68,6 @@ class FireRiskModels():
         else:
             raise ValueError(f"{test_year} is not in NFIRS Data." 
                              f" The most recent year in NFIRS is  {fires.columns[-1]}")
-        self.test_year = test_year
      
                 
         # each model will train on `n_years` of data to predict the locations subsequent year with highest fire risk 
@@ -83,12 +82,16 @@ class FireRiskModels():
         #  Test
         # predict 2017 using 2016-2015 data  
        
-        X_train, y_train,_ = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx-1)
+        X_train, y_train,input1, Xtrain_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx-1)
         self.X_train = X_train
+       
         
-        X_test, y_test,Input, self.train_years = self.munge_dataset_test(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)
-        print(len(X_test))
-        print(len(y_test))
+        X_test, y_test,Input, Xtest_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)
+        #X_test, y_test,Input, self.train_years = self.munge_dataset_test(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)  
+        model_years = np.append(Xtrain_years, fires.columns[test_year_idx-1])
+        inference_years = np.append(Xtest_years, str(test_year))
+        self.years_used = np.union1d(model_years, inference_years)
+
         
         # Note: `Input` is used for manual data validation to ensure munging performed correctly 
         
@@ -131,13 +134,13 @@ class FireRiskModels():
 
 
         # Calculate test set performance
-        print(X_test.columns)
-        print(X_train.columns)
+        #print(X_test.columns)
+        #print(X_train.columns)
         self.test_prediction_probs = model.predict_proba(X_test)
-        self.test_predictions = np.array(model.predict(X_test), dtype=bool)
+        self.test_predictions = model.predict(X_test)
         #Model_Predictions = pd.Series(test_predictions)
         #Model_Prediction_Probs = pd.Series(test_prediction_probs[:,[1]].flatten())
-        print(np.count_nonzero(np.isnan(self.test_predictions)))
+        #print(np.count_nonzero(np.isnan(self.test_predictions)))
         print (confusion_matrix(y_test, self.test_predictions))
         print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
         print (classification_report(y_test,self.test_predictions))
@@ -161,12 +164,13 @@ class FireRiskModels():
         pass
     
     @staticmethod
-    def munge_dataset(top10,fires,ACS,n_years,test_year_idx):    
+    def munge_dataset(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
         years = top10.columns
         test_loc = test_year_idx
         
         # convert format for consistent output
         X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
+        x_cols = X.columns
         
         #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
 
@@ -178,17 +182,13 @@ class FireRiskModels():
         #X['Sum']  = sm
         #X['Mean'] = mu
         X['Max']  = mx
-        
-        
-        
     
-        
         y  = top10.iloc[:,test_loc]
+        #merge to get correct list of geoids then replace NaN with False
+        y = tot_pop.merge(y, how = 'left', left_index = True, right_index = True)
+        y = y.drop(columns = ['tot_population']).fillna(False)
+        y = y.squeeze()
         
-    
-
-
-
         # merge in ACS Data into X unless NFIRS-Only model
         out_fires = []
         if not ACS.empty:
@@ -199,16 +199,9 @@ class FireRiskModels():
             
             X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
             X = X.merge(ACS, how ='right',left_index = True, right_index = True)
-            #X = X.merge(ACS, how ='left',left_index = True, right_index = True)
-            
-            print(len(X))
-            print(len(y))
-            
-            
-
-        
-        
-        return X,y,out_fires,
+            #X = X.merge(ACS, how ='left',left_index = True, right_index = True)      
+              
+        return X,y,out_fires, x_cols
 
     @staticmethod
     def munge_dataset_test(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
@@ -228,16 +221,12 @@ class FireRiskModels():
         #X['Sum']  = sm
         #X['Mean'] = mu
         X['Max']  = mx
-        
-        
-        
-    
-        
+     
         y  = top10.iloc[:,test_loc]
         #merge to get correct list of geoids then replace NaN with False
         y = tot_pop.merge(y, how = 'left', left_index = True, right_index = True)
         y = y.drop(columns = ['tot_population']).fillna(False)
-    
+        y = y.squeeze()
 
 
 
@@ -249,7 +238,7 @@ class FireRiskModels():
             out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
             
             X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
-            X = X.fillna(0)
+            #X = X.fillna(0)
             X = X.merge(ACS, how ='right',left_index = True, right_index = True)
             
             

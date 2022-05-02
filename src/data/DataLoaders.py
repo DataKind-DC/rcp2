@@ -296,6 +296,7 @@ class NFIRSData():
         #fires = fires.merge(tot_pop, how = 'left', left_index = True, right_index = True)
         #change order to keep ACS geoids
         fires = tot_pop.merge(fires, how = 'left', left_index = True, right_index = True)
+        #fires = tot_pop.merge(fires, how = 'right', left_index = True, right_index = True)
         fires.index = fires.index.rename('geoid')
 
 
