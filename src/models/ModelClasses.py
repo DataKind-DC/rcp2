@@ -50,6 +50,7 @@ class FireRiskModels():
 
         self.ACS_variables_used = ACS_variables
         ACS_data = ACS.data[ACS_variables]
+        ACS_data = ACS_data
         fires = NFIRS.fires
         top10 = NFIRS.top10
         years = top10.columns
@@ -67,7 +68,6 @@ class FireRiskModels():
         else:
             raise ValueError(f"{test_year} is not in NFIRS Data." 
                              f" The most recent year in NFIRS is  {fires.columns[-1]}")
-
      
                 
         # each model will train on `n_years` of data to predict the locations subsequent year with highest fire risk 
@@ -82,11 +82,16 @@ class FireRiskModels():
         #  Test
         # predict 2017 using 2016-2015 data  
        
-        X_train, y_train,_ = self.munge_dataset(top10,fires,ACS_data,n_years,test_year_idx-1)
+        X_train, y_train,input1, Xtrain_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx-1)
+        self.X_train = X_train
+       
         
-        X_test, y_test,Input = self.munge_dataset_test(top10,fires,ACS_data,n_years,test_year_idx)
-        print(len(X_test))
-        print(len(y_test))
+        X_test, y_test,Input, Xtest_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)
+        #X_test, y_test,Input, self.train_years = self.munge_dataset_test(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)  
+        model_years = np.append(Xtrain_years, fires.columns[test_year_idx-1])
+        inference_years = np.append(Xtest_years, str(test_year))
+        self.years_used = np.union1d(model_years, inference_years)
+
         
         # Note: `Input` is used for manual data validation to ensure munging performed correctly 
         
@@ -129,14 +134,16 @@ class FireRiskModels():
 
 
         # Calculate test set performance
-
+        #print(X_test.columns)
+        #print(X_train.columns)
         self.test_prediction_probs = model.predict_proba(X_test)
         self.test_predictions = model.predict(X_test)
         #Model_Predictions = pd.Series(test_predictions)
         #Model_Prediction_Probs = pd.Series(test_prediction_probs[:,[1]].flatten())
-        #print (confusion_matrix(y_test, self.test_predictions))
-        #print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
-        #print (classification_report(y_test,self.test_predictions))
+        #print(np.count_nonzero(np.isnan(self.test_predictions)))
+        print (confusion_matrix(y_test, self.test_predictions))
+        print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
+        print (classification_report(y_test,self.test_predictions))
         #print (log_loss(y_test,self.test_predictions))
 
 
@@ -157,12 +164,13 @@ class FireRiskModels():
         pass
     
     @staticmethod
-    def munge_dataset(top10,fires,ACS,n_years,test_year_idx):    
+    def munge_dataset(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
         years = top10.columns
         test_loc = test_year_idx
         
         # convert format for consistent output
         X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
+        x_cols = X.columns
         
         #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
 
@@ -174,72 +182,63 @@ class FireRiskModels():
         #X['Sum']  = sm
         #X['Mean'] = mu
         X['Max']  = mx
-        
-        
-        
     
-        
         y  = top10.iloc[:,test_loc]
+        #merge to get correct list of geoids then replace NaN with False
+        y = tot_pop.merge(y, how = 'left', left_index = True, right_index = True)
+        y = y.drop(columns = ['tot_population']).fillna(False)
+        y = y.squeeze()
         
-    
-
-
-
-        # merge in ACS Data into X unless NFIRS-Only model
-        out_fires = []
-        if not ACS.empty:
-            
-            # save copy for manual validation
-            out_fires = X.copy().merge(ACS, how ='left',left_index = True, right_index = True)
-            
-            X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
-            X = X.merge(ACS, how ='left',left_index = True, right_index = True)
-            
-            
-            
-            
-
-        
-        
-        return X,y,out_fires 
-
-    @staticmethod
-    def munge_dataset_test(top10,fires,ACS,n_years,test_year_idx):    
-        years = top10.columns
-        test_loc = test_year_idx
-        
-        # convert format for consistent output
-        X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
-        
-        #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
-
-        #sm = np.nansum(X, axis = 1 )
-        #mu = np.nanmean(X, axis = 1)
-        mx = np.nanmax(X, axis =1)
-        md = np.nanmedian(X,axis =1 )
-        X['Median'] = md  
-        #X['Sum']  = sm
-        #X['Mean'] = mu
-        X['Max']  = mx
-        
-        
-        
-    
-        
-        y  = top10.iloc[:,test_loc]
-        
-    
-
-
-
         # merge in ACS Data into X unless NFIRS-Only model
         out_fires = []
         if not ACS.empty:
             
             # save copy for manual validation
             out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
+            #out_fires = X.copy().merge(ACS, how ='left',left_index = True, right_index = True)
             
             X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
+            X = X.merge(ACS, how ='right',left_index = True, right_index = True)
+            #X = X.merge(ACS, how ='left',left_index = True, right_index = True)      
+              
+        return X,y,out_fires, x_cols
+
+    @staticmethod
+    def munge_dataset_test(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
+        years = top10.columns
+        test_loc = test_year_idx
+        
+        # convert format for consistent output
+        X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
+        x_cols = X.columns
+        #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
+
+        #sm = np.nansum(X, axis = 1 )
+        #mu = np.nanmean(X, axis = 1)
+        mx = np.nanmax(X, axis =1)
+        md = np.nanmedian(X,axis =1 )
+        X['Median'] = md  
+        #X['Sum']  = sm
+        #X['Mean'] = mu
+        X['Max']  = mx
+     
+        y  = top10.iloc[:,test_loc]
+        #merge to get correct list of geoids then replace NaN with False
+        y = tot_pop.merge(y, how = 'left', left_index = True, right_index = True)
+        y = y.drop(columns = ['tot_population']).fillna(False)
+        y = y.squeeze()
+
+
+
+        # merge in ACS Data into X unless NFIRS-Only model
+        out_fires = []
+        if not ACS.empty:
+            # save copy for manual validation
+            #merge to get correct list of geoids, then replace NaN with 0
+            out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
+            
+            X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
+            #X = X.fillna(0)
             X = X.merge(ACS, how ='right',left_index = True, right_index = True)
             
             
@@ -248,7 +247,7 @@ class FireRiskModels():
 
         
         
-        return X,y,out_fires     
+        return X,y,out_fires, x_cols
     
     
     @staticmethod
@@ -317,12 +316,13 @@ class SmokeAlarmModels:
                 ACS_variables = ACS.data.columns
 
         self.ACS_variables_used = ACS_variables
-        ACS = ACS.data[ACS_variables]
+        #ACS = ACS.data[ACS_variables]
 
 
 
         self.arc = ARC.data
-        self.acs = ACS
+        self.acs = ACS.data[ACS_variables]
+        self.acs_pop = ACS.tot_pop
         self.svi = SVI.data
         self.svi_use = svi_use
         
@@ -375,11 +375,15 @@ class SmokeAlarmModels:
         if self.svi_use:
             rd = rd['Population Density (per square mile), 2010'].to_frame()
             rd_all = rd_all['Population Density (per square mile), 2010'].to_frame()
+            
+
+        acs_pop = self.acs_pop[self.acs_pop['tot_population'] >= 50 ] 
+        rd = rd.filter(acs_pop.index, axis= 0)
         
-      
         mdl,X_test,y_test = self.trainXGB(X = rd, df = df, y = sm, predict = 'Presence', modeltype= 'XGBoost')
         
         predictions = mdl.predict(rd_all.merge(df,how = 'left', left_index = True, right_index = True) )
+
         sm_all['Predictions'] =np.clip(predictions,0,100)  
         
         sm_all.loc[:,['num_surveys','geography',
@@ -408,7 +412,7 @@ class SmokeAlarmModels:
            y = y.filter(X.index)
    
        # Create 80/20 training/testing set split
-       X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2 )
+       X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2, random_state = 0 )
        model = model.fit(X_train,y_train)
         # Calculate training set performance
        train_predictions = model.predict(X_train)
@@ -531,10 +535,9 @@ class SmokeAlarmModels:
         acs = self.acs.copy()
         # dict with relevant length of GEOID for tract geography
         geo_level_dict = {'State':2,'County':5,'Tract':11,'Block_Group':12}
-        
         df['geoid'] = df['geoid'].str[: geo_level_dict[geo_level]]
         acs.index =  acs.index.str[:geo_level_dict[geo_level]]
-        #acs.drop_duplicates(inplace = True)
+        #acs.drop_duplicates(inplace = True) #why drop duplicates?
         ## binarize pre_existing_alarms and _tested_and_working
         #  values will now be: 0 if no detectors present and 1 if any number were present
         df['pre_existing_alarms'].where(df['pre_existing_alarms'] < 1, other = 1, inplace = True) 
@@ -546,22 +549,20 @@ class SmokeAlarmModels:
         ## create detectors dataset
         # This happens by grouping data both on pre_existing alarms and then _tested_and working alarms 
         # and then merging the two into the final dataset
-
         detectors =  df.groupby('geoid')['pre_existing_alarms'].agg({np.size ,
                                                                     np.sum,
                                                                     lambda x: np.sum(x)/np.size(x)* 100 })
-
         detectors.rename({'size':'num_surveys','sum':'detectors_found_total','<lambda_0>':'detectors_found_prc'},
                         axis =1,
                         inplace = True)
-
         detectors['detectors_found_prc'] = detectors['detectors_found_prc'].round(2)
         
     
         
+
         d2 =  df.groupby('geoid')['pre_existing_alarms_tested_and_working'].agg({np.size,np.sum, 
                                                                                 lambda x: np.sum(x)/np.size(x)* 100 })
-        
+
         d2.rename({'size':'num_surveys2','sum':'detectors_working_total','<lambda_0>':'detectors_working_prc'},
                         axis =1,
                         inplace = True)
@@ -569,7 +570,6 @@ class SmokeAlarmModels:
         
         d2['detectors_working_prc'] = d2['detectors_working_prc'].round(2)
         
-
         detectors = detectors.merge(d2,how = 'left', on ='geoid')
 
         detectors['detectors_found_CI'] = self.CreateConfidenceIntervals(detectors['num_surveys'].values,
@@ -592,11 +592,11 @@ class SmokeAlarmModels:
                         'detectors_working_CI']
         
         detectors = detectors[column_order]
-        
         detectors = detectors[~pd.isna(detectors.index)]
     # fix block model to ensure blocks that weren't visited are added to the model 
         detectors = detectors.reindex(detectors.index.union(acs.index.unique()),fill_value = 0)
         detectors = detectors[~pd.isna(detectors.index)]
+
     
 
     # test if there are missing values in resultant 
