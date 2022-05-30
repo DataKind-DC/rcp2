@@ -377,7 +377,7 @@ class SmokeAlarmModels:
             rd_all = rd_all['Population Density (per square mile), 2010'].to_frame()
             
 
-        acs_pop = self.acs_pop[self.acs_pop['tot_population'] >= 50 ] 
+        acs_pop = self.acs_pop#[self.acs_pop['tot_population'] >= 50 ] 
         rd = rd.filter(acs_pop.index, axis= 0)
         
         mdl,X_test,y_test = self.trainXGB(X = rd, df = df, y = sm, predict = 'Presence', modeltype= 'XGBoost')
