@@ -6,17 +6,17 @@ from src import utils
 
 class ARCPData():
     # american red cross preparedness data 
-    def __init__(self, file_name = 'ARC Preparedness Data.csv'  ):
+    def __init__(self, ACS, file_name = 'ARC Preparedness Data.csv'  ):
         self.data = None
         self.file_name = utils.DATA['master'] / file_name 
         self.Load()
-        self.standardizeColumnNames()
+        self.standardizeColumnNames(ACS)
 
     def Load(self):
 
         self.data = pd.read_csv(self.file_name)
 
-    def standardizeColumnNames(self):
+    def standardizeColumnNames(self, ACS):
         """
         Standardizes column names
         """
@@ -33,7 +33,7 @@ class ARCPData():
         # trim geoid leading saftey marks 
         df['geoid'] = df['geoid'].str[2:]
 
-      
+        df = df[df['geoid'].isin(ACS.tot_pop.index)]
 
         self.data = df   
     
@@ -41,15 +41,16 @@ class ARCPData():
 class ACSData():
     # TODO: typechecking
     
-    def __init__(self,year = 2016,level = 'block_group'):
+    def __init__(self,year = 2016,level = 'block_group', pop_thresh = 0):
 
         self.file_name = utils.DATA['acs'] / "acs_{}_data.csv".format(year)
         self.level = level
         self.data = None
         self.tot_pop = None
+        self.pop_thresh = pop_thresh
         self.Load()
         self.Clean(self.data)
-        self.Munge(self.data,self.tot_pop, self.level)
+        self.Munge(self.data,self.tot_pop, self.pop_thresh, self.level)
 
     
     def Load(self):
@@ -104,7 +105,7 @@ class ACSData():
         self.data = ACS
 
     
-    def Munge(self,ACS,tot_pop,level='block_group'):
+    def Munge(self,ACS,tot_pop, pop_thresh,level='block_group'):
 
         ## ACS Munging
         
@@ -160,6 +161,9 @@ class ACSData():
 
             self.data = Data.divide(tot_pop['tot_population'],axis = 'index')
             self.tot_pop = tot_pop
+        #only get geoids with population greater than user defined value
+        self.tot_pop = self.tot_pop[self.tot_pop['tot_population']>=self.pop_thresh]
+        self.data = self.data[self.data.index.isin(self.tot_pop.index)]
 
 class SVIData():
     # TODO: typechecking
@@ -187,11 +191,12 @@ class SVIData():
   
 class NFIRSData():
     
-    def __init__(self,level,tot_pop,sev=False, min_loss = 10000):
+    def __init__(self,level,tot_pop,pop_thresh = 0, sev=False, min_loss = 10000):
         self.file_name = utils.DATA['master'] /'NFIRS Fire Incident Data.csv'
         self.tot_pop = tot_pop
         self.level = level
         self.severeFiresOnly = sev
+        self.pop_thresh = pop_thresh
         self.data = None
         self.fires = None
         self.top10 = None
@@ -200,7 +205,7 @@ class NFIRSData():
         self.Load()
         # self.Clean(self.data)
         # munge to appropriate level 
-        self.Munge(self.data, self.tot_pop,self.level, self.min_loss)
+        self.Munge(self.data, self.tot_pop,self.level, self.min_loss, self.pop_thresh)
 
     def set_sev_loss(self, min_loss):
         self.min_loss = min_loss
@@ -235,7 +240,7 @@ class NFIRSData():
         
     
 
-    def Munge(self, nfirs, tot_pop, level, min_loss):
+    def Munge(self, nfirs, tot_pop, level, min_loss, pop_thresh):
         #NFIRS Munging
 
         #Convert inc_date column values to python datetime type
@@ -306,7 +311,7 @@ class NFIRSData():
         fires.replace([np.inf, -np.inf,0], np.nan,inplace = True)
 
         # drop rows with low population count
-        fires = fires[fires['tot_population'] >= 50 ] 
+        fires = fires[fires['tot_population'] >= pop_thresh ] 
 
         # population adjustment to fires per_n_people 
         per_n_people = 1000
