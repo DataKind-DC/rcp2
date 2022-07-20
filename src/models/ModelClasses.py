@@ -336,6 +336,7 @@ class SmokeAlarmModels:
 
         # single level models 
         for geo in ['State','County','Tract','Block_Group'] :
+            print(f'Training {geo} smoke alarm stats model')
             df = self.createSingleLevelSmokeAlarmModel(geo) 
             name = 'SmokeAlarmModel' + geo + '.csv'
             df.index.name = 'geoid'
@@ -344,7 +345,7 @@ class SmokeAlarmModels:
             out_path =  utils.DATA['model-outputs'] /'Smoke_Alarm_Single_Level' / name
             df.to_csv(out_path)
             
-        
+        print(f'Training MultiLevel smoke alarm stats model')
         self.createMultiLevelSmokeAlarmModel()
         
     
@@ -354,7 +355,7 @@ class SmokeAlarmModels:
 
 
     def trainDLModel(self, data_path):
-        
+        print('Training DL model')
         sm = self.models['MultiLevel'].copy()
         
         df = self.acs.copy()        
