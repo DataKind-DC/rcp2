@@ -356,10 +356,10 @@ class SmokeAlarmModels:
     def trainDLModel(self, data_path):
         
         sm = self.models['MultiLevel'].copy()
+        
+        df = self.acs.copy()        
         if self.svi_use:
-            df = self.svi.copy()
-        else:
-            df = self.acs.copy()        
+            df =  df.merge(self.svi.copy(), how = 'left' , left_index = True, right_index =True)
         
         
         sm = sm.reset_index()

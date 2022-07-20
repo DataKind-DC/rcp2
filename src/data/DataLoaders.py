@@ -176,7 +176,7 @@ class SVIData():
         self.Clean(ACS)
         
     def Load(self):
-        self.data = pd.read_csv(self.file_name, encoding='ISO-8859-1')
+        self.data = pd.read_csv(self.file_name)
         self.data['Tract'] = self.data['GEOID'].str[2:]
     
     def Clean(self, ACS):
@@ -187,6 +187,7 @@ class SVIData():
         merged.set_index('geos', inplace=True)
         cols = ['inc_pct_poverty','RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']
         self.data = merged[cols]
+        self.data = self.data.replace(-999,np.nan)
             
   
 class NFIRSData():
