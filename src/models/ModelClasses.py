@@ -38,7 +38,7 @@ class FireRiskModels():
     def  __init__(self,Modeltype ='propensity',ACS_year = '2016'):
 
         self.SEED = 0 
-        self.type = Modeltype
+        self.Modeltype = Modeltype
         
 
     def train(self,NFIRS,ACS,ACS_variables =None, test_year='Current',n_years = 5):  
@@ -83,7 +83,7 @@ class FireRiskModels():
         # predict 2017 using 2016-2015 data  
        
         X_train, y_train,input1, Xtrain_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx-1)
-        self.X_train = X_train
+        
        
         
         X_test, y_test,Input, Xtest_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)
@@ -91,6 +91,12 @@ class FireRiskModels():
         model_years = np.append(Xtrain_years, fires.columns[test_year_idx-1])
         inference_years = np.append(Xtest_years, str(test_year))
         self.years_used = np.union1d(model_years, inference_years)
+
+        # Save Training Data 
+        self.X_train = X_train
+        self.X_test = X_test
+        self.y_train = y_train
+        self.y_test = y_test
 
         
         # Note: `Input` is used for manual data validation to ensure munging performed correctly 
@@ -144,14 +150,20 @@ class FireRiskModels():
         print (confusion_matrix(y_test, self.test_predictions))
         print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
         print (classification_report(y_test,self.test_predictions))
+        self.Classification_report = classification_report(y_test,self.test_predictions,output_dict=True )
         #print (log_loss(y_test,self.test_predictions))
 
 
         #Calculate feature importance for each model
         importances = model.feature_importances_
         indices = np.argsort(importances)[::-1]
+        
+        self.Feature_importances = dict()
         print("Feature ranking:")
         for f in range(len(X_test.columns)):
+
+            self.Feature_importances[ X_test.columns[indices[f]] ] = importances[indices[f]] 
+            
             print("%d. %s (%f)" % (f + 1, X_test.columns[indices[f]], importances[indices[f]]))
         
         
@@ -162,6 +174,26 @@ class FireRiskModels():
 
     def predict(self,NFIRS,ACS=[],predict_year='Current'):
         pass
+
+
+    def save(self,save_path):
+        import json
+        # save model
+        # note save_path Should be a Pathlib object 
+
+        self.model.save_model( save_path  / f'Fire{self.Modeltype} Model.json' )
+
+        # save model metrics
+        with open(  save_path / f'Fire{self.Modeltype}_ClassificationReport.json', 'w') as outfile:
+            json.dump(self.Classification_report, outfile)
+    
+        # save Model Data 
+        self.X_train.to_csv( save_path / X_train.csv )
+        self.X_test.to_csv( save_path / X_test.csv )
+        self.y_train.to_csv( save_path / y_train.csv )
+        self.y_train.to_csv( save_path / y_train.csv )
+
+
     
     @staticmethod
     def munge_dataset(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
