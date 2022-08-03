@@ -23,7 +23,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from scipy.stats import zscore, pearsonr
     
-
+import warnings
+warnings.filterwarnings('ignore')
+    
+from IPython.display import display, Markdown
 
 class ModelBaseClass:
     def __init__(self):
@@ -126,7 +129,7 @@ class FireRiskModels():
                     random_state=0,
                     max_features = None,
                     n_jobs = -1, 
-                    seed = self.SEED )
+                    seed = self.SEED, verbosity = 0 )
         
         model = model.fit(X_train,y_train)
       
@@ -147,9 +150,12 @@ class FireRiskModels():
         #Model_Predictions = pd.Series(test_predictions)
         #Model_Prediction_Probs = pd.Series(test_prediction_probs[:,[1]].flatten())
         #print(np.count_nonzero(np.isnan(self.test_predictions)))
+        display(Markdown('**Confusion Matrix**'))
         print (confusion_matrix(y_test, self.test_predictions))
-        print (roc_auc_score(y_test, self.test_prediction_probs[:,1]))
+        display(Markdown('**ROC AUC Score** = '+str(roc_auc_score(y_test, self.test_prediction_probs[:,1]))))
+        display(Markdown('**Classication Report**'))
         print (classification_report(y_test,self.test_predictions))
+        
         self.Classification_report = classification_report(y_test,self.test_predictions,output_dict=True )
         #print (log_loss(y_test,self.test_predictions))
 
@@ -159,7 +165,7 @@ class FireRiskModels():
         indices = np.argsort(importances)[::-1]
         
         self.Feature_importances = dict()
-        print("Feature ranking:")
+        display(Markdown('**Feature Ranking**'))
         for f in range(len(X_test.columns)):
 
             self.Feature_importances[ X_test.columns[indices[f]] ] = importances[indices[f]] 
@@ -449,7 +455,7 @@ class SmokeAlarmModels:
        model = model.fit(X_train,y_train)
         # Calculate training set performance
        train_predictions = model.predict(X_train)
-       print('-----Training_Performance------')
+       display(Markdown('**Training Performance**'))
        print(mean_squared_error(y_train, train_predictions))
        print ('Test RMSE: {}'.format(mean_squared_error(y_train, train_predictions, squared = False)) )
        print ('Test MAE: {}'.format(mean_absolute_error(y_train, train_predictions)) )
@@ -458,7 +464,7 @@ class SmokeAlarmModels:
     
        # Calculate test set performance
        test_predictions = model.predict(X_test)
-       print ('-----Test Performance ----- ')
+       display(Markdown('**Testing Performance**'))
        print ('Test RMSE: {}'.format(mean_squared_error(y_test, test_predictions, squared = False)) )
        print ('Test MAE: {}'.format(mean_absolute_error(y_test, test_predictions)) )
        sns.scatterplot(y_test,test_predictions) 
@@ -470,7 +476,7 @@ class SmokeAlarmModels:
        if modeltype == 'XGBoost':
            importances = model.feature_importances_
            indices = np.argsort(importances)[::-1]
-           print("\n Feature ranking:")
+           display(Markdown('**Feature Ranking**'))
            for f in range(len(X_test.columns)):
                print("%d. %s (%f)" % (f + 1, X_test.columns[indices[f]], importances[indices[f]])) 
 
