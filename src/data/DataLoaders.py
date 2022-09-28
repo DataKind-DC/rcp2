@@ -6,17 +6,17 @@ from src import utils
 
 class ARCPData():
     # american red cross preparedness data 
-    def __init__(self, ACS, file_name = 'ARC Preparedness Data.csv'  ):
+    def __init__(self, ACS, file_name = 'ARC Preparedness Data.csv', level = 'block_group'):
         self.data = None
         self.file_name = utils.DATA['master'] / file_name 
         self.Load()
-        self.standardizeColumnNames(ACS)
+        self.standardizeColumnNames(ACS, level)
 
     def Load(self):
 
         self.data = pd.read_csv(self.file_name)
 
-    def standardizeColumnNames(self, ACS):
+    def standardizeColumnNames(self, ACS, level):
         """
         Standardizes column names
         """
@@ -30,8 +30,15 @@ class ARCPData():
         df.columns = df.columns.str.replace(')', '_')
         df.columns = df.columns.str.replace(' ', '_')
         df.dropna(inplace = True)
-        # trim geoid leading saftey marks 
-        df['geoid'] = df['geoid'].str[2:]
+        # trim geoid leading saftey marks
+        if level == 'block_group':
+            df['geoid'] = df['geoid'].str[2:]
+        elif level == 'tract':
+            df['geoid'] = df['geoid'].str[2:-1]
+        elif level == 'county':
+            df['geoid'] = df['geoid'].str[2:-7]
+        else:
+            print('invalid level')
 
         df = df[df['geoid'].isin(ACS.tot_pop.index)]
 
@@ -47,6 +54,7 @@ class ACSData():
         self.level = level
         self.data = None
         self.tot_pop = None
+        self.tot_pop_bg = None
         self.pop_thresh = pop_thresh
         self.Load()
         self.Clean(self.data)
@@ -145,22 +153,36 @@ class ACSData():
 
         
         # munge to appropriate level 
-
+        self.tot_pop_bg = tot_pop
         if  self.level =='block_group':
             #ACS data already at block_group level
             self.tot_pop = tot_pop
         else:
             Data = self.data 
-            Data = Data.multiply(tot_pop['tot_population'],axis= 'index')
-        
-            Data.index , tot_pop.index  = Data.index.str[0:utils.GEOID[level]], \
-                                    tot_pop.index.str[0:utils.GEOID[level]]
+            operations = pd.read_csv(utils.DATA['data']/'geo_levels.csv', skiprows = 1)
+            Data_level = Data.copy()
+            Data_original = Data.copy()
+            for i in Data_level.columns:
+                a = operations.loc[operations['variable_name'] == i]
+                op = a['operator'].values
+                if (op == 'pct') | (op =='div'):
+                    Data_level[i] = Data_original[i] * Data_original[a['argument1'].item()]
+            Data_level.index = Data_level.index.str[0:utils.GEOID[level]]
 
-            Data, tot_pop = Data.groupby(Data.index).sum(), \
-                    tot_pop.groupby(tot_pop.index).sum()
-
-            self.data = Data.divide(tot_pop['tot_population'],axis = 'index')
-            self.tot_pop = tot_pop
+            Data_level_num = Data_level.groupby(Data_level.index).sum()
+            Data_level_str = Data_level.groupby(Data_level.index).first()
+            for i in Data_level_num.columns:
+                a = operations.loc[operations['variable_name'] == i]
+                op = a['operator'].values
+                if (op == 'pct') | (op =='div'):
+                    Data_level_num[i] = Data_level_num[i].divide(Data_level_num[a['argument1'].item()],axis = 'index')
+            Data_level = Data_level_num
+            Data_level['state'] = Data_level_str['state']
+            cols = Data_level.columns.tolist()
+            cols = cols[-1:] + cols[:-1]
+            Data_level = Data_level[cols]
+            self.data = Data_level
+            self.tot_pop = Data_level[['tot_population']].groupby('GEOID').sum()
         #only get geoids with population greater than user defined value
         self.tot_pop = self.tot_pop[self.tot_pop['tot_population']>=self.pop_thresh]
         self.data = self.data[self.data.index.isin(self.tot_pop.index)]
@@ -168,25 +190,54 @@ class ACSData():
 class SVIData():
     # TODO: typechecking
     # level and year are fixe
-    def __init__(self,ACS):
+    def __init__(self,ACS, tot_pop_bg, level = 'block_group'):
 
         self.file_name = utils.DATA['svi'] / "SVI Tract Data.csv"
         self.data = None
+        self.level = level
+        self.tot_pop_bg = tot_pop_bg
         self.Load()
-        self.Clean(ACS)
+        self.Clean(ACS, level)
         
     def Load(self):
-        self.data = pd.read_csv(self.file_name)
+        self.data = pd.read_csv(self.file_name, encoding='ISO-8859-1')
         self.data['Tract'] = self.data['GEOID'].str[2:]
     
-    def Clean(self, ACS):
-        ACS['Tract'] = ACS.index.str[:-1]
-        ACS['geos'] = ACS.index
-        merged = ACS.merge(self.data, how = 'left', left_on = 'Tract' , right_on ='Tract')
-        
-        merged.set_index('geos', inplace=True)
-        cols = ['inc_pct_poverty','RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']
-        self.data = merged[cols]
+    def Clean(self, ACS, level):
+        if level == 'county':
+            tract_pop = self.tot_pop_bg
+            tract_pop.index = tract_pop.index.str[0:utils.GEOID['tract']]
+            tract_pop = tract_pop.groupby(tract_pop.index).sum()
+            data = self.data
+            data.index = data['Tract']
+            data = data[['RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']]
+            data = tract_pop.merge(data, how = 'left', left_index = True, right_index = True)
+            print(data)
+            print(data.isnull().values.sum())
+            data[['RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']] = data[['RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']].multiply(data['tot_population'], axis='index')
+            data.drop('tot_population',axis = 1, inplace = True)
+            print(data)
+            data.index = data.index.str[0:utils.GEOID['county']]
+            data = data.groupby(data.index).sum()
+            data = ACS[['tot_population']].merge(data, how = 'left', left_index = True, right_index = True)
+            data[['RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']] = data[['RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']].divide(data['tot_population'], axis='index')
+            data['inc_pct_poverty'] = ACS['inc_pct_poverty']
+            data.drop('tot_population',axis = 1, inplace = True)
+            self.data = data
+        else:
+            if level == 'block_group':
+                ACS['Tract'] = ACS.index.str[:-1]
+            elif level == 'tract':
+                ACS['Tract'] = ACS.index
+            else:
+                print('invalid level')  
+            ACS['geos'] = ACS.index
+            merged = ACS.merge(self.data, how = 'left', left_on = 'Tract' , right_on ='Tract')
+            merged.set_index('geos', inplace=True)
+            cols = ['inc_pct_poverty','RPL_THEME1', 'RPL_THEME2', 'RPL_THEME3','RPL_THEME4']
+            self.data = merged[cols]
+                    
+
         self.data = self.data.replace(-999,np.nan)
             
   

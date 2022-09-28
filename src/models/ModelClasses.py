@@ -348,7 +348,7 @@ class SmokeAlarmModels:
 
         self.models = {}
         
-    def trainModels(self,ARC,ACS,SVI, ACS_variables,svi_use, data_path):
+    def trainModels(self,ARC,ACS_data,ACS_totpop, SVI, ACS_variables,svi_use, data_path, level= 'block_group'):
 
         if not ACS_variables:
                 ACS_variables = ACS.data.columns
@@ -359,29 +359,32 @@ class SmokeAlarmModels:
 
 
         self.arc = ARC.data
-        self.acs = ACS.data[ACS_variables]
-        self.acs_pop = ACS.tot_pop
+        self.acs = ACS_data[ACS_variables]
+        self.acs_pop = ACS_totpop
         self.svi = SVI.data
         self.svi_use = svi_use
         
         self.trainStatisticalModel()
-        return  self.trainDLModel(data_path)
+        return  self.trainDLModel(data_path, level)
 
 
     def trainStatisticalModel(self):
 
 
-
+        
         # single level models 
         for geo in ['State','County','Tract','Block_Group'] :
-            print(f'Training {geo} smoke alarm stats model')
-            df = self.createSingleLevelSmokeAlarmModel(geo) 
-            name = 'SmokeAlarmModel' + geo + '.csv'
-            df.index.name = 'geoid'
-            self.models[geo] = df
-            df.index =  '#_' + df.index 
-            out_path =  utils.DATA['model-outputs'] /'Smoke_Alarm_Single_Level' / name
-            df.to_csv(out_path)
+            if geo in self.models.keys():
+                print(f'{geo} smoke alarm stats model already trained')
+            else:
+                print(f'Training {geo} smoke alarm stats model')
+                df = self.createSingleLevelSmokeAlarmModel(geo) 
+                name = 'SmokeAlarmModel' + geo + '.csv'
+                df.index.name = 'geoid'
+                self.models[geo] = df
+                df.index =  '#_' + df.index 
+                out_path =  utils.DATA['model-outputs'] /'Smoke_Alarm_Single_Level' / name
+                df.to_csv(out_path)
             
         print(f'Training MultiLevel smoke alarm stats model')
         self.createMultiLevelSmokeAlarmModel()
@@ -392,45 +395,68 @@ class SmokeAlarmModels:
 
 
 
-    def trainDLModel(self, data_path):
-        print('Training DL model')
-        sm = self.models['MultiLevel'].copy()
-        
+    def trainDLModel(self, data_path, level = 'block_group'):
+        if level == 'block_group':
+            sm = self.models['MultiLevel'].copy()
+            sm = sm.reset_index()
+            sm['geoid'] = sm['geoid'].str[2:]
+            sm['tract'] = sm['geoid'].str[:-1]
+            sm.set_index('geoid', inplace =  True)
+            sm_all = sm.copy()
+            sm = sm[ sm['geography'].isin(['tract','block_group']) ].copy()
+        elif level == 'tract':
+            sm = self.models['Tract'].copy()
+            sm = sm.reset_index()
+            sm['geoid'] = sm['geoid'].str[2:]
+            sm.set_index('geoid', inplace =  True)
+            sm_all = sm.copy()
+            sm = sm[sm['num_surveys']>=30].copy()
+        elif level == 'county':
+            sm = self.models['County'].copy()
+            sm = sm.reset_index()
+            sm['geoid'] = sm['geoid'].str[2:]
+            sm.set_index('geoid', inplace =  True)
+            sm_all = sm.copy()
+            sm = sm[sm['num_surveys']>=30].copy()
         df = self.acs.copy()        
         if self.svi_use:
             df =  df.merge(self.svi.copy(), how = 'left' , left_index = True, right_index =True)
+        print('sm')
+        print(sm.shape)
+        print(sm_all.shape)
         
+
         
-        sm = sm.reset_index()
-        sm['geoid'] = sm['geoid'].str[2:]
-        sm['tract'] = sm['geoid'].str[:-1]
-        sm.set_index('geoid', inplace =  True)
-        sm_all = sm.copy()
-        sm = sm[ sm['geography'].isin(['tract','block_group']) ].copy()
-        
-        rd = self.create_rurality_data(sm,data_path, True)
-        rd_all = self.create_rurality_data(sm_all, data_path)
+        rd = self.create_rurality_data(sm,data_path, level, True)
+        rd_all = self.create_rurality_data(sm_all, data_path, level)
         
         if self.svi_use:
             rd = rd['Population Density (per square mile), 2010'].to_frame()
             rd_all = rd_all['Population Density (per square mile), 2010'].to_frame()
-            
 
-        acs_pop = self.acs_pop#[self.acs_pop['tot_population'] >= 50 ] 
-        rd = rd.filter(acs_pop.index, axis= 0)
-        
+        acs = self.acs#[self.acs_pop['tot_population'] >= 50 ] 
+        rd = rd.filter(acs.index, axis= 0)
+
         mdl,X_test,y_test = self.trainXGB(X = rd, df = df, y = sm, predict = 'Presence', modeltype= 'XGBoost')
-        
+
         predictions = mdl.predict(rd_all.merge(df,how = 'left', left_index = True, right_index = True) )
 
         sm_all['Predictions'] =np.clip(predictions,0,100)  
         
-        sm_all.loc[:,['num_surveys','geography',
+        if level == 'block_group':
+            sm_all.loc[:,['num_surveys','geography',
               'detectors_found_prc',
               'detectors_working_prc',
               'Predictions'] ]
+        else:
+            sm_all.loc[:,['num_surveys',
+              'detectors_found_prc',
+              'detectors_working_prc',
+              'Predictions'] ]            
         sm_all = sm_all.merge(rd_all['Population Density (per square mile), 2010'],how = 'left',left_index = True,right_index = True)
-         
+        self.rd = rd
+        self.rd_all = rd_all
+        self.sm_all = sm_all
         return sm_all
     
     def trainXGB(self, X, df, y, predict, modeltype):
@@ -449,7 +475,8 @@ class SmokeAlarmModels:
        if not df.empty:
            X = X.merge(df, how ='left',left_index = True, right_index = True)
            y = y.filter(X.index)
-   
+
+    
        # Create 80/20 training/testing set split
        X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2, random_state = 0 )
        model = model.fit(X_train,y_train)
@@ -485,18 +512,43 @@ class SmokeAlarmModels:
 
         
         
-    def create_rurality_data(self, sm, data_path, subset_county = False): 
+    def create_rurality_data(self, sm, data_path, level = 'block_group', subset_county = False): 
         #Rurality Data Munging 
         rd = pd.read_csv( data_path/'Master Project Data'/'Tract Rurality Data.csv', dtype = {'Tract':'object'},encoding = 'latin-1' )
         rd['Population Density (per square mile), 2010'] =  rd['Population Density (per square mile), 2010'].str.replace(',','').astype('float')
         rd['Tract'] = rd['Tract'].str[2:]
-        rd = rd.iloc[:,[0,2,4,6,8]]
-        block_tract = sm['tract'].to_frame()
-        block_tract = block_tract.reset_index()
-        rd = block_tract.merge(rd, how = 'left', left_on = 'tract' , right_on ='Tract')
-        rd.set_index('geoid',inplace= True)
-        rd = rd.iloc[:,2:]
-        rd['Select State'] = rd['Select State'].astype('category')
+        if level == 'block_group' or level == 'tract':
+            rd = rd.iloc[:,[0,2,4,6,8]]
+            if level == 'tract':
+                sm['tract'] = sm.index
+            block_tract = sm['tract'].to_frame()
+            block_tract = block_tract.reset_index()
+            rd = block_tract.merge(rd, how = 'left', left_on = 'tract' , right_on ='Tract')
+            rd.set_index('geoid',inplace= True)
+            rd = rd.iloc[:,2:]
+            rd['Select State'] = rd['Select State'].astype('category')
+            self.rd_bg = rd
+        else:
+            rd['county_id'] = rd['Tract'].str[:-6]
+            rd['Tract Population, 2010'] = rd['Tract Population, 2010'].str.replace(',', '')
+            rd['Tract Population, 2010'] = rd['Tract Population, 2010'].astype(float)
+            rd['Land Area (square miles), 2010'] = rd['Land Area (square miles), 2010'].str.replace(',', '')
+            rd['Land Area (square miles), 2010'] = rd['Land Area (square miles), 2010'].astype(float)
+            rd_stats = rd.groupby('county_id')[['Tract Population, 2010', 'Land Area (square miles), 2010']].sum()
+            #rd_state = rd.groupby('county_id')['Select State'].count()
+            rd_stats['Population Density (per square mile), 2010'] = rd_stats['Tract Population, 2010']/rd_stats['Land Area (square miles), 2010']
+            self.rd_stats = rd_stats
+            
+            rd_state = rd.groupby('county_id')['Select State'].agg(pd.Series.mode).to_frame()
+            self.rd_sate =rd_state
+            rd = rd_stats.merge(rd_state, how = 'left', left_index = True, right_index = True)
+            rd = rd.rename(index  = {'county_id': 'geoid'})
+            rd['geoid'] = rd.index
+            rd['Select State'] = rd['Select State'].astype('category')
+            rd = rd.filter(sm.index, axis= 0)
+            rd = rd.reindex(sm.index)
+            rd = rd.drop(columns = ['geoid'])
+            self.rd = rd
 
         # add state level model estimates 
         sms = pd.rd = pd.read_csv( data_path /'Model Outputs'/'Smoke_Alarm_Single_Level'/ 'SmokeAlarmModelState.csv')
@@ -504,7 +556,7 @@ class SmokeAlarmModels:
         sms =  sms.loc[:,['geoid','detectors_found_prc']]
         sms = sms.rename(columns= {'geoid':'state_geoid'}  )
 
-        rd['state_geoid'] = rd.index.str[:2]
+        rd['state_geoid'] = rd.index.astype('string').str[:2]
         rd = rd.reset_index()
         rd = rd.merge(sms,how = 'left', on = 'state_geoid' )
         rd.drop('state_geoid',axis = 1,inplace = True)
@@ -528,9 +580,8 @@ class SmokeAlarmModels:
         rd = rd.set_index('geoid')
   #  rd['RUCA_rurality_index'] = rd['Primary RUCA Code 2010']
   #  rd[rd['RUCA_rurality_index'] > 10 ] = np.NaN
-        rd = rd.iloc[:,3:]
+        rd = rd[['Population Density (per square mile), 2010', 'state_detectors_found_prc', 'county_detectors_found_prc']]
         self.rd = rd
-
         return rd 
         
         
@@ -571,11 +622,11 @@ class SmokeAlarmModels:
 #        _prc  - indicates percentage: (_total / num_surveys * 100)
 #
         df = self.arc.copy()
-        acs = self.acs.copy()
+        acs_totpop = self.acs_pop.copy()
         # dict with relevant length of GEOID for tract geography
         geo_level_dict = {'State':2,'County':5,'Tract':11,'Block_Group':12}
         df['geoid'] = df['geoid'].str[: geo_level_dict[geo_level]]
-        acs.index =  acs.index.str[:geo_level_dict[geo_level]]
+        acs_totpop.index =  acs_totpop.index.str[:geo_level_dict[geo_level]]
         #acs.drop_duplicates(inplace = True) #why drop duplicates?
         ## binarize pre_existing_alarms and _tested_and_working
         #  values will now be: 0 if no detectors present and 1 if any number were present
@@ -633,7 +684,7 @@ class SmokeAlarmModels:
         detectors = detectors[column_order]
         detectors = detectors[~pd.isna(detectors.index)]
     # fix block model to ensure blocks that weren't visited are added to the model 
-        detectors = detectors.reindex(detectors.index.union(acs.index.unique()),fill_value = 0)
+        detectors = detectors.reindex(detectors.index.union(acs_totpop.index.unique()),fill_value = 0)
         detectors = detectors[~pd.isna(detectors.index)]
 
     
@@ -647,6 +698,10 @@ class SmokeAlarmModels:
 
         if 'Block_Group' not in self.models.keys():
             self.createSingleLevelSmokeAlarmModel(self,'Block_Group') 
+            
+        if 'MultiLevel' in self.models.keys():
+            print('already trained')
+            return
 
         block_data = self.models['Block_Group'].copy()
         all_IDS = block_data.index
