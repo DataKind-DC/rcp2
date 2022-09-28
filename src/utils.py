@@ -35,6 +35,7 @@ DATA = {
     "raw": ROOT / "Data" / "raw",
     "interim": ROOT / "Data" / 'interim',
     "master": ROOT / "Data" / "Master Project Data",
+    "logging": ROOT / 'Data' / 'Logs',
     "model-outputs": ROOT / "Data" / "Model Outputs",
     "processed": ROOT / "Data" / "processed",
     "shapefiles": ROOT / "Data" / "03_Shapefiles",
@@ -43,7 +44,7 @@ DATA = {
     'acs' : ROOT /'Data' / 'Model Outputs' / 'ACS_Extraction' ,
     'svi' : ROOT/'Data' / 'Master Project Data',
     'map-outputs' : ROOT/"Data"/"Map Outputs"
-}
+    }
 
 
 GEOID = { 
