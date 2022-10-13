@@ -161,8 +161,8 @@ class FireRiskModels():
             print("%d. %s (%f)" % (f + 1, X_test.columns[indices[f]], importances[indices[f]]))
         
         
-        self.prediction_probs = model.predict_proba(X_predict)
-        self.predictions = model.predict(X_predict)
+        self.prediction_probs = pd.DataFrame(model.predict_proba(X_predict), X_predict.index)
+        self.predictions = pd.DataFrame(model.predict(X_predict), X_predict.index)
 
         self.model = model
         self.Input = Input
