@@ -44,7 +44,7 @@ class FireRiskModels():
         self.Modeltype = Modeltype
         
 
-    def train(self,NFIRS,ACS,ACS_variables =None, test_year='Current',n_years = 5):  
+    def train(self,NFIRS,ACS,ACS_variables, prediction_year ,n_years = 5):  
     # Create framework to predict whether a given census block has a fire risk score in the 90th percentile 
             # based on the specific number of previous years' data
         
@@ -62,38 +62,35 @@ class FireRiskModels():
         Model_Prediction_Probs = None
         Model_Actual = None
         
-        # get year index 
-        if test_year == 'Current': 
-            test_year = fires.columns[-1]
-        
-        if test_year in fires.columns:
-            test_year_idx = fires.columns.get_loc(test_year)
-        else:
-            raise ValueError(f"{test_year} is not in NFIRS Data." 
-                             f" The most recent year in NFIRS is  {fires.columns[-1]}")
-     
                 
         # each model will train on `n_years` of data to predict the locations subsequent year with highest fire risk 
         # model will train predicting 1 year and then test model accuracy by predicting the next year 
         
         # for example: 
         
-        #  Train 
+        #  Train/Test 
         # predict 2016 using 2015-2012 data 
         #
         #
-        #  Test
+        #  Predict
         # predict 2017 using 2016-2015 data  
        
-        X_train, y_train,input1, Xtrain_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx-1)
         
-       
-        
-        X_test, y_test,Input, Xtest_years = self.munge_dataset(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)
-        #X_test, y_test,Input, self.train_years = self.munge_dataset_test(top10,fires,ACS_data,ACS.tot_pop, n_years,test_year_idx)  
-        model_years = np.append(Xtrain_years, fires.columns[test_year_idx-1])
-        inference_years = np.append(Xtest_years, str(test_year))
-        self.years_used = np.union1d(model_years, inference_years)
+    
+
+        X, y,_ = self.munge_dataset(top10,fires,ACS_data,n_years,prediction_year-1)
+    
+        X_predict, _,Input = self.munge_dataset(top10,fires,ACS_data,n_years,prediction_year)
+    
+        # Note: `Input` is used for manual data validation to ensure munging performed correctly 
+     
+
+        # Create 80/20 training/testing set split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=.2,
+                                                            stratify = y,random_state = self.SEED )
+
+        # Perform resampling if data classes are unbalanced
+        X_train, y_train = self.resample_df(X_train,y_train,upsample = False)
 
         # Save Training Data 
         self.X_train = X_train
@@ -102,16 +99,7 @@ class FireRiskModels():
         self.y_test = y_test
 
         
-        # Note: `Input` is used for manual data validation to ensure munging performed correctly 
-        
-
-        # Create 80/20 training/testing set split
-        #X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2 )
-
-        # Perform resampling if data classes are unbalanced
-        X_train, y_train = self.resample_df(X_train,y_train,upsample = False)
-
-
+      
 
         # Standardize features by removing the mean and scaling to unit variance
 
@@ -122,8 +110,8 @@ class FireRiskModels():
 
         # Fit model to training set
 
-        print('Predicting {}:'.format(str(test_year)) )
-        
+        print(f'Testing {prediction_year - 1 }:')
+        print(f'Predicting {prediction_year }:')
         model = XGBClassifier( n_estimators=60,
                     max_depth=10,
                     random_state=0,
@@ -173,6 +161,9 @@ class FireRiskModels():
             print("%d. %s (%f)" % (f + 1, X_test.columns[indices[f]], importances[indices[f]]))
         
         
+        self.prediction_probs = model.predict_proba(X_predict)
+        self.predictions = model.predict(X_predict)
+
         self.model = model
         self.Input = Input
         
@@ -202,9 +193,15 @@ class FireRiskModels():
 
     
     @staticmethod
-    def munge_dataset(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
+    def munge_dataset(top10,fires,ACS, n_years,test_year):    
         years = top10.columns
-        test_loc = test_year_idx
+    
+        if str(test_year) in years:
+            test_loc = years.get_loc(str(test_year))
+            y  = top10.iloc[:,test_loc]
+        else:
+            test_loc = years.shape[0] + 1 
+            y = None
         
         # convert format for consistent output
         X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
@@ -220,73 +217,35 @@ class FireRiskModels():
         #X['Sum']  = sm
         #X['Mean'] = mu
         X['Max']  = mx
+        
+        
+        
     
-        y  = top10.iloc[:,test_loc]
-        #merge to get correct list of geoids then replace NaN with False
-        y = tot_pop.merge(y, how = 'left', left_index = True, right_index = True)
-        y = y.drop(columns = ['tot_population']).fillna(False)
-        y = y.squeeze()
         
-        # merge in ACS Data into X unless NFIRS-Only model
-        out_fires = []
-        if not ACS.empty:
-            
-            # save copy for manual validation
-            out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
-            #out_fires = X.copy().merge(ACS, how ='left',left_index = True, right_index = True)
-            
-            X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
-            X = X.merge(ACS, how ='right',left_index = True, right_index = True)
-            #X = X.merge(ACS, how ='left',left_index = True, right_index = True)      
-              
-        return X,y,out_fires, x_cols
-
-    @staticmethod
-    def munge_dataset_test(top10,fires,ACS,tot_pop, n_years,test_year_idx):    
-        years = top10.columns
-        test_loc = test_year_idx
         
-        # convert format for consistent output
-        X =  fires.iloc[:,test_loc-n_years:test_loc].copy()
-        x_cols = X.columns
-        #X.columns = ['year-{}'.format(n_years-1 - year) for year in range(n_years-1)]
-
-        #sm = np.nansum(X, axis = 1 )
-        #mu = np.nanmean(X, axis = 1)
-        mx = np.nanmax(X, axis =1)
-        md = np.nanmedian(X,axis =1 )
-        X['Median'] = md  
-        #X['Sum']  = sm
-        #X['Mean'] = mu
-        X['Max']  = mx
-     
-        y  = top10.iloc[:,test_loc]
-        #merge to get correct list of geoids then replace NaN with False
-        y = tot_pop.merge(y, how = 'left', left_index = True, right_index = True)
-        y = y.drop(columns = ['tot_population']).fillna(False)
-        y = y.squeeze()
+        
+    
 
 
 
         # merge in ACS Data into X unless NFIRS-Only model
         out_fires = []
         if not ACS.empty:
+            
             # save copy for manual validation
-            #merge to get correct list of geoids, then replace NaN with 0
-            out_fires = X.copy().merge(ACS, how ='right',left_index = True, right_index = True)
+            out_fires = X.copy().merge(ACS, how ='left',left_index = True, right_index = True)
             
             X=X[['Max','Median']] # drop all other NFIRS columns that have low feature importance scores
-            #X = X.fillna(0)
-            X = X.merge(ACS, how ='right',left_index = True, right_index = True)
+            X = X.merge(ACS, how ='left',left_index = True, right_index = True)
             
             
-            
-            
+        
+        
 
-        
-        
-        return X,y,out_fires, x_cols
     
+    
+        return X,y,out_fires 
+
     
     @staticmethod
     def resample_df(X,y,upsample=True,seed = 0):
