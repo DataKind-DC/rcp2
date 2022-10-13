@@ -151,23 +151,27 @@ class ACSData():
             self.tot_pop = tot_pop
         else:
             Data = self.data 
+            # weight each value by its population
             Data = Data.multiply(tot_pop['tot_population'],axis= 'index')
         
+        # set index to new census level
             Data.index , tot_pop.index  = Data.index.str[0:utils.GEOID[level]], \
                                     tot_pop.index.str[0:utils.GEOID[level]]
 
+            # aggregate data to new census level
             Data, tot_pop = Data.groupby(Data.index).sum(), \
                     tot_pop.groupby(tot_pop.index).sum()
-
+        # divide by tot pop of new census level to get weighted average 
             self.data = Data.divide(tot_pop['tot_population'],axis = 'index')
             self.tot_pop = tot_pop
+
         #only get geoids with population greater than user defined value
         self.tot_pop = self.tot_pop[self.tot_pop['tot_population']>=self.pop_thresh]
         self.data = self.data[self.data.index.isin(self.tot_pop.index)]
 
 class SVIData():
     # TODO: typechecking
-    # level and year are fixe
+    # level and year are fixed
     def __init__(self,ACS):
 
         self.file_name = utils.DATA['svi'] / "SVI Tract Data.csv"
@@ -279,7 +283,6 @@ class NFIRSData():
         # package  
         self.data = nfirs
 #-------------------------
-        nfirs = self.data
         L = utils.GEOID[level]
         # shorten geoid to desired geography
         nfirs.index = nfirs.index.str[0:L]
