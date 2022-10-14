@@ -307,7 +307,7 @@ class SmokeAlarmModels:
 
         self.models = {}
         
-    def trainModels(self,ARC,ACS,SVI, ACS_variables,svi_use, data_path):
+    def trainModels(self,ARC,ACS,SVI, ACS_variables, data_path):
 
         if not ACS_variables:
                 ACS_variables = ACS.data.columns
@@ -321,7 +321,6 @@ class SmokeAlarmModels:
         self.acs = ACS.data[ACS_variables]
         self.acs_pop = ACS.tot_pop
         self.svi = SVI.data
-        self.svi_use = svi_use
         
         self.trainStatisticalModel()
         return  self.trainDLModel(data_path)
@@ -354,60 +353,72 @@ class SmokeAlarmModels:
     def trainDLModel(self, data_path):
         print('Training DL model')
         sm = self.models['MultiLevel'].copy()
-        
-        df = self.acs.copy()        
-        if self.svi_use:
-            df =  df.merge(self.svi.copy(), how = 'left' , left_index = True, right_index =True)
-        
-        
+      
+    
+       # remove _# from geoid
         sm = sm.reset_index()
         sm['geoid'] = sm['geoid'].str[2:]
-        sm['tract'] = sm['geoid'].str[:-1]
+        #sm['tract'] = sm['geoid'].str[:-1]
         sm.set_index('geoid', inplace =  True)
+
+        # restrict to cols needed for modeling 
+        sm = sm.loc[:,['num_surveys','detectors_found_prc','detectors_working_prc','geography']]
+
+
+
+        # merge in all datasets 
+        df = self.svi.copy()      
+        #df =  df.merge(self.acs.copy(), how = 'left' , left_index = True, right_index =True)
+        sm = sm.merge(df, how = 'left' , left_index = True, right_index =True)
+        # seperate into train/test and prediction data 
         sm_all = sm.copy()
+        sm_all = sm_all[ sm_all['geography'].isin(['county','state']) ]
+
         sm = sm[ sm['geography'].isin(['tract','block_group']) ].copy()
         
-        rd = self.create_rurality_data(sm,data_path, True)
-        rd_all = self.create_rurality_data(sm_all, data_path)
+        ## Modeling 
+        mdl,X_test,y_test = self.trainXGB(df = sm, predict = 'Presence', modeltype= 'XGBoost')
         
-        if self.svi_use:
-            rd = rd['Population Density (per square mile), 2010'].to_frame()
-            rd_all = rd_all['Population Density (per square mile), 2010'].to_frame()
-            
-
-        acs_pop = self.acs_pop#[self.acs_pop['tot_population'] >= 50 ] 
-        rd = rd.filter(acs_pop.index, axis= 0)
-        
-        mdl,X_test,y_test = self.trainXGB(X = rd, df = df, y = sm, predict = 'Presence', modeltype= 'XGBoost')
-        
-        predictions = mdl.predict(rd_all.merge(df,how = 'left', left_index = True, right_index = True) )
+        predictions = mdl.predict(sm_all.drop(['num_surveys','detectors_found_prc','detectors_working_prc','geography'],axis = 1) )
 
         sm_all['Predictions'] =np.clip(predictions,0,100)  
         
+
+        ## final munging before output 
         sm_all.loc[:,['num_surveys','geography',
               'detectors_found_prc',
               'detectors_working_prc',
               'Predictions'] ]
-        sm_all = sm_all.merge(rd_all['Population Density (per square mile), 2010'],how = 'left',left_index = True,right_index = True)
-         
+       
+        # use statistical model for predictions in areas that have enough surveys at block group
+        sm_all.loc[ sm_all['geography'].isin(['block_group']),
+                'Predictions'] =  sm_all.loc[
+                                  sm_all['geography'].isin(['block_group']),
+                                         'detectors_found_prc']     
+       
+        sm_all['model_used'] = np.where(sm_all['geography'].isin(['block_group']), 
+                                        'statistical',
+                                        'deep-learning'
+                                        )   
         return sm_all
     
-    def trainXGB(self, X, df, y, predict, modeltype):
+    def trainXGB(self, df, predict, modeltype):
         
        assert(predict in ['Presence', 'Working'])  
         
        model = xgb.XGBRegressor(objective = 'reg:squarederror',random_state = 0)
             
        if  predict == 'Presence':
-           y = y['detectors_found_prc']
+           y = df['detectors_found_prc']
+           X = df.drop(['num_surveys','detectors_found_prc','detectors_working_prc','geography'],axis=1)
        elif predict =='Working':
            y = y['detectors_working_prc']
-
+           X = df.drop(['num_surveys','detectors_found_prc','detectors_working_prc','geography'],axis=1)
 
        # merge in ACS Data into X unless NFIRS-Only model
-       if not df.empty:
-           X = X.merge(df, how ='left',left_index = True, right_index = True)
-           y = y.filter(X.index)
+       #if not df.empty:
+       #    X = X.merge(df, how ='left',left_index = True, right_index = True)
+       #    y = y.filter(X.index)
    
        # Create 80/20 training/testing set split
        X_train, X_test, y_train, y_test = train_test_split(X, y,test_size = .2, random_state = 0 )
