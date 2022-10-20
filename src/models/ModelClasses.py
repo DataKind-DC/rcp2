@@ -323,7 +323,7 @@ class SmokeAlarmModels:
         self.svi = SVI.data
         
         self.trainStatisticalModel()
-        return  self.trainDLModel(data_path)
+        return  self.trainMLModel(data_path)
 
 
     def trainStatisticalModel(self):
@@ -350,7 +350,7 @@ class SmokeAlarmModels:
 
 
 
-    def trainDLModel(self, data_path):
+    def trainMLModel(self, data_path):
         print('Training DL model')
         sm = self.models['MultiLevel'].copy()
       
@@ -381,24 +381,26 @@ class SmokeAlarmModels:
         
         predictions = mdl.predict(sm_all.drop(['num_surveys','detectors_found_prc','detectors_working_prc','geography'],axis = 1) )
 
-        sm_all['Predictions'] =np.clip(predictions,0,100)  
+        self.ml_model = mdl
+
+        sm_all['detectors_predicted'] =np.clip(predictions,0,100)  
         
 
         ## final munging before output 
         sm_all.loc[:,['num_surveys','geography',
               'detectors_found_prc',
               'detectors_working_prc',
-              'Predictions'] ]
+              'detectors_predicted'] ]
        
         # use statistical model for predictions in areas that have enough surveys at block group
         sm_all.loc[ sm_all['geography'].isin(['block_group']),
-                'Predictions'] =  sm_all.loc[
+                'detectors_predicted'] =  sm_all.loc[
                                   sm_all['geography'].isin(['block_group']),
                                          'detectors_found_prc']     
        
         sm_all['model_used'] = np.where(sm_all['geography'].isin(['block_group']), 
                                         'statistical',
-                                        'deep-learning'
+                                        'machine-learning'
                                         )   
         return sm_all
     
